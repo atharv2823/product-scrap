@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bot, Sparkles, Volume2, VolumeX, Bell, Globe2, Zap, ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
+import { Bot, Sparkles, Volume2, VolumeX, Bell, Globe2, Zap, ArrowUpRight, LogIn, UserPlus } from 'lucide-react';
 import { soundFX } from './AudioFX';
 
 interface NavbarProps {
@@ -35,13 +36,17 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#080d22]/70 border-b border-indigo-500/15 transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
         
         {/* Brand & Logo */}
-        <div className="flex items-center gap-3">
-          <div className="relative group flex items-center justify-center">
+        <Link 
+          href="/" 
+          onClick={() => soundFX.playClick()}
+          className="flex items-center gap-3 group cursor-pointer"
+        >
+          <div className="relative flex items-center justify-center">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 rounded-2xl blur-sm opacity-70 group-hover:opacity-100 transition duration-500 animate-pulse" />
-            <div className="relative w-11 h-11 rounded-xl bg-[#090e24] border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.35)]">
+            <div className="relative w-11 h-11 rounded-xl bg-[#090e24] border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:scale-105 transition-transform">
               <Bot className="w-6 h-6 animate-bounce text-cyan-300" />
             </div>
           </div>
@@ -58,10 +63,10 @@ export default function Navbar({
               Autonomous Cross-Platform Price Vision & Arbitrage Engine
             </p>
           </div>
-        </div>
+        </Link>
 
         {/* Live Network & Agent Swarm Status */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-6">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-300">
             <span className="relative flex h-2 w-2">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isScanning ? 'bg-amber-400' : 'bg-emerald-400'} opacity-75`} />
@@ -79,7 +84,7 @@ export default function Navbar({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Currency Switcher */}
           <div className="relative">
             <select
@@ -88,7 +93,7 @@ export default function Navbar({
                 onCurrencyChange(e.target.value);
                 soundFX.playClick();
               }}
-              className="bg-[#0b1233]/90 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-xl border border-indigo-500/30 focus:outline-none focus:border-cyan-400 cursor-pointer appearance-none pr-7 hover:border-indigo-400 transition"
+              className="bg-[#0b1233]/90 text-slate-200 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl border border-indigo-500/30 focus:outline-none focus:border-cyan-400 cursor-pointer appearance-none pr-6 sm:pr-7 hover:border-indigo-400 transition"
             >
               {Object.entries(CURRENCY_SYMBOLS).map(([code, meta]) => (
                 <option key={code} value={code} className="bg-[#0b1233] text-white">
@@ -116,11 +121,33 @@ export default function Navbar({
               soundFX.playClick();
               onOpenAlertModal();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-indigo-600/30 hover:from-cyan-500/30 hover:to-indigo-600/40 border border-cyan-400/40 text-cyan-200 text-xs font-medium transition shadow-[0_0_15px_rgba(6,182,212,0.15)] group"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-indigo-600/30 hover:from-cyan-500/30 hover:to-indigo-600/40 border border-cyan-400/40 text-cyan-200 text-xs font-medium transition shadow-[0_0_15px_rgba(6,182,212,0.15)] group"
           >
             <Bell className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-            <span className="hidden sm:inline">Set Price Alert</span>
+            <span>Alerts</span>
           </button>
+
+          {/* Auth Navigation Links */}
+          <div className="flex items-center gap-1.5 pl-1 border-l border-indigo-500/20">
+            <Link
+              href="/login"
+              onClick={() => soundFX.playClick()}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition"
+            >
+              <LogIn className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sign In</span>
+            </Link>
+
+            <Link
+              href="/signup"
+              onClick={() => soundFX.playClick()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] transition group"
+            >
+              <UserPlus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Get Started</span>
+              <span className="sm:hidden">Join</span>
+            </Link>
+          </div>
         </div>
       </div>
     </header>
