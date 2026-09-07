@@ -6,20 +6,20 @@ import { useRouter } from 'next/navigation';
 import MotionBackground from '../../components/MotionBackground';
 import { soundFX } from '../../components/AudioFX';
 import confetti from 'canvas-confetti';
-import { 
-  Bot, 
-  Sparkles, 
-  Lock, 
-  Mail, 
-  User, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
+  Bot,
+  Sparkles,
+  Lock,
+  Mail,
+  User,
+  Eye,
+  EyeOff,
+  ArrowRight,
   ArrowLeft,
-  ShieldCheck, 
-  Zap, 
-  Layers, 
-  CheckCircle2, 
+  ShieldCheck,
+  Zap,
+  Layers,
+  CheckCircle2,
   AlertCircle,
   Volume2,
   VolumeX,
@@ -147,7 +147,7 @@ export default function SignupPage() {
       {/* Header Bar */}
       <header className="relative z-20 w-full backdrop-blur-xl bg-[#080d22]/70 border-b border-indigo-500/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link 
+          <Link
             href="/"
             onClick={() => soundFX.playClick()}
             className="flex items-center gap-3 group"
@@ -194,7 +194,7 @@ export default function SignupPage() {
       {/* Main Dual-Column Section */}
       <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 flex items-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
+
           {/* Left Column: Platform Superpowers & Metrics */}
           <div className="lg:col-span-5 space-y-6 text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950/70 border border-cyan-400/30 text-cyan-300 text-xs font-mono font-semibold tracking-wider shadow-[0_0_15px_rgba(6,182,212,0.2)]">
@@ -255,12 +255,12 @@ export default function SignupPage() {
 
           {/* Right Column: Interactive Registration Card */}
           <div className="lg:col-span-7 relative">
-            
+
             {/* Cyber Aura */}
             <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/25 via-indigo-600/25 to-fuchsia-500/25 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
             <div className="relative rounded-3xl backdrop-blur-2xl bg-[#090f2e]/95 border border-cyan-400/30 p-6 sm:p-8 shadow-[0_0_50px_rgba(6,182,212,0.25)] space-y-5">
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
@@ -305,7 +305,7 @@ export default function SignupPage() {
 
               {/* Registration Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                
+
                 {/* Full Name & Email (2-col on tablet/desktop) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
@@ -414,11 +414,10 @@ export default function SignupPage() {
                             soundFX.playClick();
                             setRole(item.id as any);
                           }}
-                          className={`p-2.5 rounded-xl border text-left transition ${
-                            isActive
+                          className={`p-2.5 rounded-xl border text-left transition ${isActive
                               ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.25)]'
                               : 'bg-[#0b1338]/60 border-indigo-500/20 text-slate-400 hover:border-indigo-400/40 hover:text-slate-200'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-1.5">
                             <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
@@ -512,7 +511,7 @@ export default function SignupPage() {
 
       {/* Footer */}
       <footer className="relative z-10 py-4 border-t border-indigo-500/10 text-center text-[11px] text-slate-500 font-mono">
-        <span>PRICESYNC.AI SOVEREIGN IDENTITY REGISTRY • LEVEL 4 ENCRYPTION • 2026</span>
+        <span>SnapPrice SOVEREIGN IDENTITY REGISTRY • LEVEL 4 ENCRYPTION • 2026</span>
       </footer>
     </div>
   );

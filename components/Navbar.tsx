@@ -45,7 +45,6 @@ export default function Navbar({
           className="flex items-center gap-3 group cursor-pointer"
         >
           <div className="relative flex items-center justify-center">
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 rounded-2xl blur-sm opacity-70 group-hover:opacity-100 transition duration-500 animate-pulse" />
             <div className="relative w-11 h-11 rounded-xl bg-[#090e24] border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:scale-105 transition-transform">
               <Bot className="w-6 h-6 animate-bounce text-cyan-300" />
             </div>
@@ -53,10 +52,7 @@ export default function Navbar({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-wider text-xl sm:text-2xl bg-gradient-to-r from-white via-cyan-200 to-indigo-300 bg-clip-text text-transparent font-sans">
-                PRICESYNC<span className="text-cyan-400">.AI</span>
-              </span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                <Sparkles className="w-2.5 h-2.5 animate-spin" /> AGENTIC V2.5
+                SnapPrice
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block tracking-wide">

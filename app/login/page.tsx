@@ -5,19 +5,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MotionBackground from '../../components/MotionBackground';
 import { soundFX } from '../../components/AudioFX';
-import { 
-  Bot, 
-  Sparkles, 
-  Lock, 
-  Mail, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
+  Bot,
+  Sparkles,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ArrowRight,
   ArrowLeft,
-  ShieldCheck, 
-  Zap, 
-  KeyRound, 
-  CheckCircle2, 
+  ShieldCheck,
+  Zap,
+  KeyRound,
+  CheckCircle2,
   AlertCircle,
   Volume2,
   VolumeX,
@@ -49,7 +49,7 @@ export default function LoginPage() {
 
   const handleFillDemo = () => {
     soundFX.playClick();
-    setEmail('pro_hunter@pricesync.ai');
+    setEmail('pro_hunter@SnapPrice');
     setPassword('CyberSync2026!');
   };
 
@@ -114,7 +114,7 @@ export default function LoginPage() {
       {/* Top Navigation Bar */}
       <header className="relative z-20 w-full backdrop-blur-xl bg-[#080d22]/70 border-b border-indigo-500/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link 
+          <Link
             href="/"
             onClick={() => soundFX.playClick()}
             className="flex items-center gap-3 group"
@@ -161,24 +161,24 @@ export default function LoginPage() {
       {/* Main Authentication Container */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md relative">
-          
+
           {/* Cyber Ambient Aura behind card */}
           <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/30 via-indigo-600/30 to-fuchsia-500/30 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
           {/* Futuristic Card */}
           <div className="relative rounded-3xl backdrop-blur-2xl bg-[#090f2e]/90 border border-cyan-400/30 p-6 sm:p-8 shadow-[0_0_50px_rgba(6,182,212,0.25)] space-y-6">
-            
+
             {/* Top Badge & Header */}
             <div className="text-center space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/30 text-cyan-300 text-[11px] font-mono font-semibold tracking-wider shadow-[0_0_12px_rgba(6,182,212,0.2)]">
                 <KeyRound className="w-3 h-3 text-cyan-400" />
                 <span>AUTHENTICATION PROTOCOL</span>
               </div>
-              
+
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                 Initialize Session
               </h1>
-              
+
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 Sign in to manage live visual scrapes, price alerts, and automated arbitrage triggers.
               </p>
@@ -223,7 +223,7 @@ export default function LoginPage() {
 
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              
+
               {/* Email Field */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
@@ -237,7 +237,7 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="pro_hunter@pricesync.ai"
+                    placeholder="pro_hunter@SnapPrice"
                     required
                     className="w-full bg-[#0b1338]/90 border border-indigo-500/30 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition shadow-inner"
                   />
@@ -463,7 +463,7 @@ export default function LoginPage() {
 
       {/* Global Minimal Footer */}
       <footer className="relative z-10 py-4 border-t border-indigo-500/10 text-center text-[11px] text-slate-500 font-mono">
-        <span>PRICESYNC.AI SYSTEM CORE • NODE SECURE GATEWAY • AGENTIC COMMERCE</span>
+        <span>SnapPrice SYSTEM CORE • NODE SECURE GATEWAY • AGENTIC COMMERCE</span>
       </footer>
     </div>
   );

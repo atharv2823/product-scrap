@@ -120,7 +120,7 @@ d:\Personal Project's\product-scrap\
 
 ### 2. Login Page (`/login`)
 - **Aesthetic**: Particle canvas backdrop with a glassmorphic `#090f2e` card and glowing neon border.
-- **1-Click Demo Login**: Pre-populates verified credentials (`pro_hunter@pricesync.ai`) to enable instant evaluation without typing.
+- **1-Click Demo Login**: Pre-populates verified credentials (`pro_hunter@SnapPrice`) to enable instant evaluation without typing.
 - **Form Controls**: Email input, password input with show/hide eye toggle, remember session checkbox.
 - **Interactive Reset Modal**: "Forgot Password?" dialog providing one-time recovery key simulation.
 - **Social & Biometric Auth**: Google, GitHub, and Biometric WebAuthn passkey simulation.
