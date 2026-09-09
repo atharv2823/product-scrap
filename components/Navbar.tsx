@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bot, Sparkles, Volume2, VolumeX, Bell, Globe2, Zap, ArrowUpRight, LogIn, UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bot, Sparkles, Volume2, VolumeX, Bell, Globe2, Zap, ArrowUpRight, LogIn, UserPlus, LogOut, User } from 'lucide-react';
 import { soundFX } from './AudioFX';
+import { getCurrentUser, logoutUser, SnapPriceUser } from '../lib/auth';
 
 interface NavbarProps {
   activeCurrency: string;
   onCurrencyChange: (curr: string) => void;
   onOpenAlertModal: () => void;
   isScanning: boolean;
+  onReplayLoader?: () => void;
 }
 
 export const CURRENCY_SYMBOLS: Record<string, { symbol: string; rate: number; label: string }> = {
@@ -23,9 +26,36 @@ export default function Navbar({
   activeCurrency,
   onCurrencyChange,
   onOpenAlertModal,
-  isScanning
+  isScanning,
+  onReplayLoader
 }: NavbarProps) {
+  const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [currentUser, setCurrentUser] = useState<SnapPriceUser | null>(null);
+
+  useEffect(() => {
+    // Initial check
+    setCurrentUser(getCurrentUser());
+
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    window.addEventListener('snapprice_auth_change', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('snapprice_auth_change', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    soundFX.playClick();
+    logoutUser();
+    router.push('/login');
+  };
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -71,11 +101,6 @@ export default function Navbar({
             <span className="font-mono text-[11px]">
               {isScanning ? 'Multi-Agent Scraping Active...' : '8 Marketplaces Connected'}
             </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Real-time Arbitrage</span>
           </div>
         </div>
 
@@ -123,26 +148,70 @@ export default function Navbar({
             <span>Alerts</span>
           </button>
 
-          {/* Auth Navigation Links */}
-          <div className="flex items-center gap-1.5 pl-1 border-l border-indigo-500/20">
-            <Link
-              href="/login"
-              onClick={() => soundFX.playClick()}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition"
+          {/* Optional Replay Loader Button */}
+          {onReplayLoader && (
+            <button
+              onClick={() => {
+                soundFX.playClick();
+                onReplayLoader();
+              }}
+              title="Replay SnapPrice Intro Loader"
+              className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/20 text-indigo-300 text-[11px] font-mono transition"
             >
-              <LogIn className="w-3.5 h-3.5 text-slate-400" />
-              <span>Sign In</span>
-            </Link>
+              <Sparkles className="w-3 h-3 text-cyan-400" />
+              <span>Intro</span>
+            </button>
+          )}
 
-            <Link
-              href="/signup"
-              onClick={() => soundFX.playClick()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] transition group"
-            >
-              <UserPlus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline">Get Started</span>
-              <span className="sm:hidden">Join</span>
-            </Link>
+          {/* Auth State Controls */}
+          <div className="flex items-center gap-1.5 pl-1 border-l border-indigo-500/20">
+            {currentUser ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[10px] shadow-sm">
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[11px] font-bold text-slate-200 leading-none truncate max-w-[100px]">
+                      {currentUser.name}
+                    </p>
+                    <span className="text-[9px] text-cyan-400 font-mono capitalize">
+                      {currentUser.role || 'Hunter'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  title="Sign Out of SnapPrice"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-rose-950/60 border border-slate-700/60 hover:border-rose-500/50 text-slate-300 hover:text-rose-300 text-xs font-medium transition shadow-sm"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-slate-400 hover:text-rose-400" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => soundFX.playClick()}
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Sign In</span>
+                </Link>
+
+                <Link
+                  href="/signup"
+                  onClick={() => soundFX.playClick()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] transition group"
+                >
+                  <UserPlus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Join</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

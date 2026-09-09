@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import MotionBackground from '../components/MotionBackground';
 import Navbar from '../components/Navbar';
 import ImageScanner from '../components/ImageScanner';
@@ -9,11 +10,18 @@ import PriceComparisonBoard from '../components/PriceComparisonBoard';
 import AlternativesSection from '../components/AlternativesSection';
 import AIChatBot from '../components/AIChatBot';
 import PriceAlertModal from '../components/PriceAlertModal';
+import SnapPriceLoader from '../components/SnapPriceLoader';
 import { PRODUCT_PRESETS, ProductPreset } from '../lib/mockData';
 import { soundFX } from '../components/AudioFX';
+import { isAuthenticated, getCurrentUser } from '../lib/auth';
 import { Sparkles, Shield, Cpu, Zap, ArrowRight, Layers, Bot } from 'lucide-react';
 
 export default function Home() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const [currentProduct, setCurrentProduct] = useState<ProductPreset>(PRODUCT_PRESETS[0]);
   const [activeCurrency, setActiveCurrency] = useState('USD');
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -22,6 +30,22 @@ export default function Home() {
   const [isScanning, setIsScanning] = useState(false);
   const [agentStage, setAgentStage] = useState(5);
   const [isAgentComplete, setIsAgentComplete] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+    const auth = isAuthenticated();
+    setIsLoggedIn(auth);
+    if (!auth) {
+      setShowLoader(true);
+    }
+
+    const handleAuthChange = () => {
+      setIsLoggedIn(isAuthenticated());
+    };
+
+    window.addEventListener('snapprice_auth_change', handleAuthChange);
+    return () => window.removeEventListener('snapprice_auth_change', handleAuthChange);
+  }, []);
 
   const triggerAgentPipeline = (productToScan: ProductPreset) => {
     setIsScanning(true);
@@ -231,6 +255,31 @@ export default function Home() {
     triggerAgentPipeline(customProduct);
   };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#050714] flex items-center justify-center text-cyan-400 font-mono text-xs">
+        <div className="flex items-center gap-2 animate-pulse">
+          <div className="w-2 h-2 rounded-full bg-cyan-400" />
+          <span>Initializing SnapPrice Matrix...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (showLoader) {
+    return (
+      <SnapPriceLoader
+        brandTitle="SnapPrice"
+        onComplete={() => {
+          setShowLoader(false);
+          if (!isAuthenticated()) {
+            router.push('/login');
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <main className="relative min-h-screen text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-slate-950 font-sans">
       {/* 1. Motion Graphics Canvas Background */}
@@ -242,6 +291,7 @@ export default function Home() {
         onCurrencyChange={setActiveCurrency}
         onOpenAlertModal={() => setIsAlertModalOpen(true)}
         isScanning={isScanning}
+        onReplayLoader={() => setShowLoader(true)}
       />
 
       {/* Main Content Container */}
@@ -331,7 +381,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4 text-cyan-400" />
-            <span className="font-bold text-slate-300">PRICESYNC AGENTIC AI</span>
+            <span className="font-bold text-slate-300">SnapPrice AGENTIC AI</span>
             <span>• Next-Gen Visual Commerce Engine</span>
           </div>
 

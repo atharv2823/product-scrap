@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import MotionBackground from '../../components/MotionBackground';
 import { soundFX } from '../../components/AudioFX';
 import confetti from 'canvas-confetti';
+import { registerUser } from '../../lib/auth';
 import {
   Bot,
   Sparkles,
@@ -92,17 +93,25 @@ export default function SignupPage() {
       return;
     }
 
+    const result = registerUser(fullName, email, password, role);
+    if (!result.success) {
+      soundFX.playClick();
+      setRegStatus('error');
+      setStatusMessage(result.error || 'Failed to create account.');
+      return;
+    }
+
     setRegStatus('submitting');
-    setStatusMessage('Generating Sovereign Neural Key & Assigning Scraping Cluster...');
+    setStatusMessage('Generating Sovereign SnapPrice Key & Assigning Scraping Cluster...');
     soundFX.playScanBeep();
 
     setTimeout(() => {
       setStatusMessage('Syncing with 8 Marketplace Crawlers...');
       soundFX.playAgentStep();
-    }, 700);
+    }, 600);
 
     setTimeout(() => {
-      setStatusMessage('Registration Complete! Initializing Workspace...');
+      setStatusMessage('Registration Complete! Redirecting to Sign In...');
       setRegStatus('success');
       soundFX.playDealFound();
 
@@ -115,27 +124,32 @@ export default function SignupPage() {
       } catch {
         // Safe catch
       }
-    }, 1400);
+    }, 1200);
 
     setTimeout(() => {
-      router.push('/');
-    }, 2200);
+      router.push(`/login?registered=true&email=${encodeURIComponent(email)}`);
+    }, 2000);
   };
 
   const handleSocialSignup = (provider: string) => {
     soundFX.playClick();
+    const socialEmail = `${provider.toLowerCase()}_user@snapprice.ai`;
+    registerUser(`${provider} User`, socialEmail, 'SocialOAuth2026!', 'hunter');
+
     setRegStatus('submitting');
-    setStatusMessage(`Synthesizing Neural ID via ${provider}...`);
+    setStatusMessage(`Synthesizing SnapPrice ID via ${provider}...`);
     setTimeout(() => {
       setRegStatus('success');
-      setStatusMessage(`Account created via ${provider}. Welcome to the Swarm.`);
+      setStatusMessage(`Account created via ${provider}. Redirecting to Sign In...`);
       soundFX.playDealFound();
       try {
         confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 } });
       } catch {
         // Safe catch
       }
-      setTimeout(() => router.push('/'), 1300);
+      setTimeout(() => {
+        router.push(`/login?registered=true&email=${encodeURIComponent(socialEmail)}`);
+      }, 1400);
     }, 1000);
   };
 
@@ -161,7 +175,7 @@ export default function SignupPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold tracking-wider text-lg sm:text-xl bg-gradient-to-r from-white via-cyan-200 to-indigo-300 bg-clip-text text-transparent">
-                  PRICESYNC<span className="text-cyan-400">.AI</span>
+                  SnapPrice
                 </span>
                 <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
                   <Sparkles className="w-2.5 h-2.5 animate-spin" /> NEW AGENT NODE
@@ -267,7 +281,7 @@ export default function SignupPage() {
                     Deploy Your Neural Node
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Create your free PriceSync AI account in seconds.
+                    Create your free SnapPrice account in seconds.
                   </p>
                 </div>
 
@@ -495,7 +509,7 @@ export default function SignupPage() {
 
               {/* Bottom Login Switcher */}
               <div className="pt-1 text-center text-xs text-slate-400">
-                <span>Already have a PriceSync Neural ID? </span>
+                <span>Already have a SnapPrice account? </span>
                 <Link
                   href="/login"
                   onClick={() => soundFX.playClick()}

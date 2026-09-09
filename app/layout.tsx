@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PriceSync AI — Agentic Visual Product Price Scraper & Arbitrage",
+  title: "SnapPrice — Agentic Visual Product Price Scraper & Arbitrage",
   description: "Upload any product image to trigger an autonomous multi-agent AI pipeline that scrapes live prices across Amazon, Walmart, Best Buy, eBay, and B&H, discovers hidden coupons, and recommends smart alternatives.",
   keywords: ["price comparison", "visual search", "AI price scraper", "product image search", "ecommerce arbitrage", "agentic AI"]
 };
