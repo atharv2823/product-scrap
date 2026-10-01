@@ -1,49 +1,63 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import MotionBackground from '../../components/MotionBackground';
 import { soundFX } from '../../components/AudioFX';
 import confetti from 'canvas-confetti';
 import { registerUser } from '../../lib/auth';
+import { useSignupStore } from '../../lib/signupStore';
 import {
   Bot,
   Sparkles,
   Lock,
   Mail,
   User,
+  Hash,
   Eye,
   EyeOff,
   ArrowRight,
   ArrowLeft,
-  ShieldCheck,
   Zap,
-  Layers,
   CheckCircle2,
   AlertCircle,
   Volume2,
   VolumeX,
   TrendingDown,
-  ShoppingBag,
-  Globe2,
-  Check
+  Globe2
 } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
 
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<'hunter' | 'arbitrageur' | 'developer'>('hunter');
-  const [agreeTerms, setAgreeTerms] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-
-  // States: idle | submitting | success | error
-  const [regStatus, setRegStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
+  const {
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    age,
+    setAge,
+    fullName,
+    setFullName,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPassword,
+    setShowPassword,
+    role,
+    setRole,
+    agreeTerms,
+    setAgreeTerms,
+    soundEnabled,
+    setSoundEnabled,
+    regStatus,
+    setRegStatus,
+    statusMessage,
+    setStatusMessage,
+  } = useSignupStore();
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -71,15 +85,23 @@ export default function SignupPage() {
 
   const handleFillDemo = () => {
     soundFX.playClick();
-    setFullName('Sarah Lin');
-    setEmail('sarah.lin@arbitrage.ai');
-    setPassword('QuantumSecure#2026');
+    setFirstName('Rahul');
+    setLastName('Coder');
+    setFullName('Rahul Coder');
+    setAge(24);
+    setEmail('rahul@gmail.com');
+    setPassword('pass123');
     setRole('arbitrageur');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password) {
+
+    const activeFirstName = firstName.trim() || fullName.trim().split(/\s+/)[0] || '';
+    const activeLastName = lastName.trim() || fullName.trim().split(/\s+/).slice(1).join(' ') || '';
+    const activeAge = Number(age) || 24;
+
+    if (!activeFirstName || !email.trim() || !password) {
       soundFX.playClick();
       setRegStatus('error');
       setStatusMessage('Please fill all required identification fields.');
@@ -93,24 +115,28 @@ export default function SignupPage() {
       return;
     }
 
-    const result = registerUser(fullName, email, password, role);
-    if (!result.success) {
-      soundFX.playClick();
-      setRegStatus('error');
-      setStatusMessage(result.error || 'Failed to create account.');
-      return;
-    }
-
     setRegStatus('submitting');
-    setStatusMessage('Generating Sovereign SnapPrice Key & Assigning Scraping Cluster...');
+    setStatusMessage('Transmitting neural credentials to authentication node...');
     soundFX.playScanBeep();
 
-    setTimeout(() => {
-      setStatusMessage('Syncing with 8 Marketplace Crawlers...');
-      soundFX.playAgentStep();
-    }, 600);
+    try {
+      const payload = {
+        email: email.trim(),
+        password,
+        firstName: activeFirstName,
+        lastName: activeLastName,
+        age: activeAge,
+      };
 
-    setTimeout(() => {
+      await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/register`, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Keep local session registry updated for seamless client state
+      registerUser(`${activeFirstName} ${activeLastName}`.trim(), email, password, role);
+
       setStatusMessage('Registration Complete! Redirecting to Sign In...');
       setRegStatus('success');
       soundFX.playDealFound();
@@ -119,38 +145,27 @@ export default function SignupPage() {
         confetti({
           particleCount: 80,
           spread: 80,
-          origin: { y: 0.5 }
+          origin: { y: 0.5 },
         });
       } catch {
         // Safe catch
       }
-    }, 1200);
 
-    setTimeout(() => {
-      router.push(`/login?registered=true&email=${encodeURIComponent(email)}`);
-    }, 2000);
-  };
-
-  const handleSocialSignup = (provider: string) => {
-    soundFX.playClick();
-    const socialEmail = `${provider.toLowerCase()}_user@snapprice.ai`;
-    registerUser(`${provider} User`, socialEmail, 'SocialOAuth2026!', 'hunter');
-
-    setRegStatus('submitting');
-    setStatusMessage(`Synthesizing SnapPrice ID via ${provider}...`);
-    setTimeout(() => {
-      setRegStatus('success');
-      setStatusMessage(`Account created via ${provider}. Redirecting to Sign In...`);
-      soundFX.playDealFound();
-      try {
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 } });
-      } catch {
-        // Safe catch
-      }
       setTimeout(() => {
-        router.push(`/login?registered=true&email=${encodeURIComponent(socialEmail)}`);
-      }, 1400);
-    }, 1000);
+        router.push(`/login?registered=true&email=${encodeURIComponent(email)}`);
+      }, 1200);
+    } catch (err: unknown) {
+      soundFX.playClick();
+      setRegStatus('error');
+
+      if (axios.isAxiosError(err)) {
+        const errorData = err.response?.data;
+        const msg = errorData?.message || errorData?.error || err.message || 'Failed to create account.';
+        setStatusMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+      } else {
+        setStatusMessage('Failed to connect to authentication service.');
+      }
+    }
   };
 
   return (
@@ -315,11 +330,11 @@ export default function SignupPage() {
               {/* Registration Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
 
-                {/* Full Name & Email (2-col on tablet/desktop) */}
+                {/* First Name & Last Name (2-col on tablet/desktop) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
-                      Full Name
+                      First Name
                     </label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-cyan-400 transition-colors">
@@ -327,15 +342,37 @@ export default function SignupPage() {
                       </div>
                       <input
                         type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Sarah Lin"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Jhon"
                         required
                         className="w-full bg-[#0b1338]/90 border border-indigo-500/30 rounded-xl pl-10 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition"
                       />
                     </div>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+                      Last Name
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-cyan-400 transition-colors">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Deo"
+                        required
+                        className="w-full bg-[#0b1338]/90 border border-indigo-500/30 rounded-xl pl-10 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Address & Age (2-col on tablet/desktop) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
                       Email Address
@@ -348,7 +385,28 @@ export default function SignupPage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="sarah@domain.com"
+                        placeholder="example@gmail.com"
+                        required
+                        className="w-full bg-[#0b1338]/90 border border-indigo-500/30 rounded-xl pl-10 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+                      Age
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-cyan-400 transition-colors">
+                        <Hash className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        placeholder="21"
                         required
                         className="w-full bg-[#0b1338]/90 border border-indigo-500/30 rounded-xl pl-10 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition"
                       />
