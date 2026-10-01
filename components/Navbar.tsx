@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bot, Sparkles, Volume2, VolumeX, Bell, Globe2, Zap, ArrowUpRight, LogIn, UserPlus, LogOut, User } from 'lucide-react';
+import { Bot, Sparkles, Volume2, VolumeX, Bell,LogIn, UserPlus, LogOut, User, History } from 'lucide-react';
 import { soundFX } from './AudioFX';
 import { getCurrentUser, logoutUser, SnapPriceUser } from '../lib/auth';
+import axios from 'axios';
 
 interface NavbarProps {
   activeCurrency: string;
@@ -22,6 +23,17 @@ export const CURRENCY_SYMBOLS: Record<string, { symbol: string; rate: number; la
   INR: { symbol: '₹', rate: 86.5, label: 'INR (₹)' },
 };
 
+export interface UserProfile {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  age?: number;
+  role?: string;
+  createdAt?: string;
+}
+
 export default function Navbar({
   activeCurrency,
   onCurrencyChange,
@@ -31,7 +43,25 @@ export default function Navbar({
 }: NavbarProps) {
   const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [currentUser, setCurrentUser] = useState<SnapPriceUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const hasFetchedUserRef = useRef(false);
+
+  const userFullName = currentUser
+    ? currentUser.firstName || currentUser.lastName
+      ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim()
+      : currentUser.name || currentUser.email?.split('@')[0] || 'User'
+    : 'User';
+
+  const userInitial = currentUser
+    ? (
+        currentUser.firstName?.trim().charAt(0) ||
+        currentUser.name?.trim().charAt(0) ||
+        currentUser.email?.trim().charAt(0) ||
+        'U'
+      ).toUpperCase()
+    : 'U';
 
   useEffect(() => {
     // Initial check
@@ -45,14 +75,56 @@ export default function Navbar({
     window.addEventListener('snapprice_auth_change', handleAuthChange);
     window.addEventListener('storage', handleAuthChange);
 
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
       window.removeEventListener('snapprice_auth_change', handleAuthChange);
       window.removeEventListener('storage', handleAuthChange);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  const handleGetuser = async () => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+    if (!token) return;
+
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = response.data;
+      const formattedName =
+        data.firstName || data.lastName
+          ? `${data.firstName || ''} ${data.lastName || ''}`.trim()
+          : data.name || data.email?.split('@')[0] || 'User';
+
+      setCurrentUser({
+        ...data,
+        name: formattedName,
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasFetchedUserRef.current) {
+      hasFetchedUserRef.current = true;
+      handleGetuser();
+    }
   }, []);
 
   const handleLogout = () => {
     soundFX.playClick();
+    hasFetchedUserRef.current = false;
+    sessionStorage.removeItem('access_token');
     logoutUser();
     router.push('/login');
   };
@@ -107,7 +179,7 @@ export default function Navbar({
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Currency Switcher */}
-          <div className="relative">
+          {/* <div className="relative">
             <select
               value={activeCurrency}
               onChange={(e) => {
@@ -125,7 +197,7 @@ export default function Navbar({
             <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">
               ▼
             </div>
-          </div>
+          </div> */}
 
           {/* Sound FX Toggle */}
           <button
@@ -137,7 +209,7 @@ export default function Navbar({
           </button>
 
           {/* Price Drop Alert Modal Trigger */}
-          <button
+          {/* <button
             onClick={() => {
               soundFX.playClick();
               onOpenAlertModal();
@@ -146,7 +218,7 @@ export default function Navbar({
           >
             <Bell className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
             <span>Alerts</span>
-          </button>
+          </button> */}
 
           {/* Optional Replay Loader Button */}
           {onReplayLoader && (
@@ -166,29 +238,92 @@ export default function Navbar({
           {/* Auth State Controls */}
           <div className="flex items-center gap-1.5 pl-1 border-l border-indigo-500/20">
             {currentUser ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[10px] shadow-sm">
-                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[11px] font-bold text-slate-200 leading-none truncate max-w-[100px]">
-                      {currentUser.name}
-                    </p>
-                    <span className="text-[9px] text-cyan-400 font-mono capitalize">
-                      {currentUser.role || 'Hunter'}
-                    </span>
-                  </div>
-                </div>
-
+              <div className="relative" ref={dropdownRef}>
+                {/* Initial Logo Button */}
                 <button
-                  onClick={handleLogout}
-                  title="Sign Out of SnapPrice"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-rose-950/60 border border-slate-700/60 hover:border-rose-500/50 text-slate-300 hover:text-rose-300 text-xs font-medium transition shadow-sm"
+                  type="button"
+                  onClick={() => {
+                    soundFX.playClick();
+                    setDropdownOpen(!dropdownOpen);
+                  }}
+                  title={userFullName}
+                  className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 p-[1.5px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(6,182,212,0.35)] hover:shadow-[0_0_20px_rgba(6,182,212,0.55)] cursor-pointer focus:outline-none"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-slate-400 hover:text-rose-400" />
-                  <span className="hidden sm:inline">Sign Out</span>
+                  <div className="w-full h-full rounded-[10px] bg-[#090e24] flex items-center justify-center text-white font-extrabold text-xs sm:text-sm tracking-wide">
+                    {userInitial}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#090e24] shadow-sm" />
                 </button>
+
+                {/* Dropdown Menu */}
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2.5 w-56 rounded-2xl bg-[#090f2e]/95 backdrop-blur-2xl border border-indigo-500/30 p-2 shadow-[0_10px_40px_rgba(0,0,0,0.6),0_0_20px_rgba(6,182,212,0.2)] z-50">
+                    {/* User Header */}
+                    <div className="px-3 py-2.5 border-b border-indigo-500/20 mb-1.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                          {userInitial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate">
+                            {userFullName}
+                          </p>
+                          {currentUser.age && (
+                            <p className="text-[10px] text-cyan-400 font-mono">
+                              Age: {currentUser.age}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono truncate">
+                        {currentUser.email}
+                      </p>
+                    </div>
+
+                    {/* Options */}
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFX.playClick();
+                          setDropdownOpen(false);
+                          router.push('/profile');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-slate-800/70 border border-transparent hover:border-indigo-500/30 transition text-left cursor-pointer group"
+                      >
+                        <User className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                        <span>Edit Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFX.playClick();
+                          setDropdownOpen(false);
+                          router.push('/history');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-slate-800/70 border border-transparent hover:border-indigo-500/30 transition text-left cursor-pointer group"
+                      >
+                        <History className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                        <span>History Product</span>
+                      </button>
+
+                      <div className="my-1 border-t border-indigo-500/20" />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-300 hover:text-rose-200 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/30 transition text-left cursor-pointer group"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>
