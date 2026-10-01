@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
+import { create } from 'zustand';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import axios from 'axios';
 import MotionBackground from '../../components/MotionBackground';
 import { soundFX } from '../../components/AudioFX';
-import { loginUser, DEMO_USER, DEMO_PASSWORD } from '../../lib/auth';
+import { setStoredSession, DEMO_USER, DEMO_PASSWORD } from '../../lib/auth';
 import {
   Bot,
   Sparkles,
@@ -22,8 +24,84 @@ import {
   AlertCircle,
   Volume2,
   VolumeX,
-  Fingerprint
 } from 'lucide-react';
+
+type AuthStatus = 'idle' | 'authenticating' | 'success' | 'error';
+
+interface LoginState {
+  email: string;
+  password: string;
+  showPassword: boolean;
+  rememberMe: boolean;
+  soundEnabled: boolean;
+  authStatus: AuthStatus;
+  statusMessage: string;
+  forgotModalOpen: boolean;
+  resetEmail: string;
+  resetSent: boolean;
+
+  setEmail: (email: string) => void;
+  setPassword: (password: string) => void;
+  setShowPassword: (show: boolean | ((prev: boolean) => boolean)) => void;
+  toggleShowPassword: () => void;
+  setRememberMe: (remember: boolean | ((prev: boolean) => boolean)) => void;
+  setSoundEnabled: (enabled: boolean | ((prev: boolean) => boolean)) => void;
+  setAuthStatus: (status: AuthStatus) => void;
+  setStatusMessage: (msg: string) => void;
+  setForgotModalOpen: (open: boolean) => void;
+  setResetEmail: (email: string) => void;
+  setResetSent: (sent: boolean) => void;
+  resetLoginForm: () => void;
+}
+
+const useLoginStore = create<LoginState>((set) => ({
+  email: '',
+  password: '',
+  showPassword: false,
+  rememberMe: true,
+  soundEnabled: true,
+  authStatus: 'idle',
+  statusMessage: '',
+  forgotModalOpen: false,
+  resetEmail: '',
+  resetSent: false,
+
+  setEmail: (email) => set({ email }),
+  setPassword: (password) => set({ password }),
+  setShowPassword: (showPassword) =>
+    set((state) => ({
+      showPassword:
+        typeof showPassword === 'function' ? showPassword(state.showPassword) : showPassword,
+    })),
+  toggleShowPassword: () => set((state) => ({ showPassword: !state.showPassword })),
+  setRememberMe: (rememberMe) =>
+    set((state) => ({
+      rememberMe:
+        typeof rememberMe === 'function' ? rememberMe(state.rememberMe) : rememberMe,
+    })),
+  setSoundEnabled: (soundEnabled) =>
+    set((state) => ({
+      soundEnabled:
+        typeof soundEnabled === 'function' ? soundEnabled(state.soundEnabled) : soundEnabled,
+    })),
+  setAuthStatus: (authStatus) => set({ authStatus }),
+  setStatusMessage: (statusMessage) => set({ statusMessage }),
+  setForgotModalOpen: (forgotModalOpen) => set({ forgotModalOpen }),
+  setResetEmail: (resetEmail) => set({ resetEmail }),
+  setResetSent: (resetSent) => set({ resetSent }),
+  resetLoginForm: () =>
+    set({
+      email: '',
+      password: '',
+      showPassword: false,
+      rememberMe: true,
+      authStatus: 'idle',
+      statusMessage: '',
+      forgotModalOpen: false,
+      resetEmail: '',
+      resetSent: false,
+    }),
+}));
 
 function LoginContent() {
   const router = useRouter();
@@ -32,18 +110,28 @@ function LoginContent() {
   const isRegisteredParam = searchParams.get('registered') === 'true';
   const emailParam = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState(emailParam || '');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-
-  // States: idle | authenticating | success | error
-  const [authStatus, setAuthStatus] = useState<'idle' | 'authenticating' | 'success' | 'error'>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
-  const [forgotModalOpen, setForgotModalOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetSent, setResetSent] = useState(false);
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPassword,
+    setShowPassword,
+    rememberMe,
+    setRememberMe,
+    soundEnabled,
+    setSoundEnabled,
+    authStatus,
+    setAuthStatus,
+    statusMessage,
+    setStatusMessage,
+    forgotModalOpen,
+    setForgotModalOpen,
+    resetEmail,
+    setResetEmail,
+    resetSent,
+    setResetSent,
+  } = useLoginStore();
 
   // If email param changes, update email state
   useEffect(() => {
@@ -61,11 +149,11 @@ function LoginContent() {
 
   const handleFillDemo = () => {
     soundFX.playClick();
-    setEmail(DEMO_USER.email);
-    setPassword(DEMO_PASSWORD);
+    setEmail('atharva@gmail.com');
+    setPassword('pass123');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       soundFX.playClick();
@@ -78,19 +166,34 @@ function LoginContent() {
     setStatusMessage('Handshaking with SnapPrice Authentication Swarm...');
     soundFX.playScanBeep();
 
-    setTimeout(() => {
-      setStatusMessage('Verifying credentials & loading workspace...');
-      soundFX.playAgentStep();
-    }, 500);
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`,
+        {
+          email: email.trim(),
+          password,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    setTimeout(() => {
-      const res = loginUser(email, password);
-      if (!res.success) {
-        setAuthStatus('error');
-        setStatusMessage(res.error || 'Authentication failed. Please verify credentials.');
-        soundFX.playClick();
-        return;
+      const token = response.data?.access_token;
+      if (token) {
+        // Store access_token in session
+        sessionStorage.setItem('access_token', token);
       }
+
+      // Update active user session for UI components like Navbar
+      setStoredSession({
+        id: email.trim(),
+        name: email.split('@')[0],
+        email: email.trim(),
+        role: 'hunter',
+        createdAt: new Date().toISOString(),
+      });
 
       setStatusMessage('Authentication successful! Launching SnapPrice Dashboard...');
       setAuthStatus('success');
@@ -99,23 +202,25 @@ function LoginContent() {
       setTimeout(() => {
         router.push('/');
       }, 700);
-    }, 1100);
+    } catch (err: unknown) {
+      soundFX.playClick();
+      setAuthStatus('error');
+
+      if (axios.isAxiosError(err)) {
+        const errorData = err.response?.data;
+        const msg =
+          errorData?.message ||
+          errorData?.error ||
+          (err.response?.status === 401
+            ? 'Invalid credentials. Please verify your email and password.'
+            : 'Authentication failed. Please verify credentials.');
+        setStatusMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+      } else {
+        setStatusMessage('Authentication failed. Please check server connectivity.');
+      }
+    }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    soundFX.playClick();
-    setAuthStatus('authenticating');
-    setStatusMessage(`Connecting to ${provider} Neural OAuth Bridge...`);
-    setTimeout(() => {
-      // Auto-login / register with social identity
-      const socialEmail = `${provider.toLowerCase().replace(/\s+/g, '_')}@snapprice.ai`;
-      loginUser(socialEmail, 'SocialOAuth2026!');
-      setAuthStatus('success');
-      setStatusMessage(`Authenticated via ${provider}. Welcome to SnapPrice.`);
-      soundFX.playSuccessTone();
-      setTimeout(() => router.push('/'), 800);
-    }, 900);
-  };
 
   const handleResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
