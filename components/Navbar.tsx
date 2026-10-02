@@ -147,9 +147,12 @@ export default function Navbar({
           className="flex items-center gap-3 group cursor-pointer"
         >
           <div className="relative flex items-center justify-center">
-            <div className="relative w-11 h-11 rounded-xl bg-[#090e24] border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:scale-105 transition-transform">
+            {/* <div className="relative w-11 h-11 rounded-xl bg-[#090e24] border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:scale-105 transition-transform">
               <Bot className="w-6 h-6 animate-bounce text-cyan-300" />
-            </div>
+            </div> */}
+
+            <img src='/pricing.png' className='w-10 h-10 ' />
+
           </div>
           <div>
             <div className="flex items-center gap-2">
