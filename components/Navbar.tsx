@@ -7,6 +7,7 @@ import { Bot, Sparkles, Volume2, VolumeX, Bell,LogIn, UserPlus, LogOut, User, Hi
 import { soundFX } from './AudioFX';
 import { getCurrentUser, logoutUser, SnapPriceUser } from '../lib/auth';
 import axios from 'axios';
+import SearchHistoryModal from './SearchHistoryModal';
 
 interface NavbarProps {
   activeCurrency: string;
@@ -45,6 +46,7 @@ export default function Navbar({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hasFetchedUserRef = useRef(false);
 
@@ -137,7 +139,8 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#080d22]/70 border-b border-indigo-500/15 transition-all duration-300">
+    <>
+      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#080d22]/70 border-b border-indigo-500/15 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
         
         {/* Brand & Logo */}
@@ -303,7 +306,7 @@ export default function Navbar({
                         onClick={() => {
                           soundFX.playClick();
                           setDropdownOpen(false);
-                          router.push('/history');
+                          setIsHistoryModalOpen(true);
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-slate-800/70 border border-transparent hover:border-indigo-500/30 transition text-left cursor-pointer group"
                       >
@@ -354,5 +357,12 @@ export default function Navbar({
         </div>
       </div>
     </header>
+
+    {/* User Search History Modal */}
+    <SearchHistoryModal
+      isOpen={isHistoryModalOpen}
+      onClose={() => setIsHistoryModalOpen(false)}
+    />
+  </>
   );
 }
