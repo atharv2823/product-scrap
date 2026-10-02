@@ -1,17 +1,47 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Scan, Sparkles, Image as ImageIcon, CheckCircle2, RefreshCw, Cpu, Layers, Tag, Eye } from 'lucide-react';
+import axios from 'axios';
+import { Upload, Scan, Sparkles, Image as ImageIcon, CheckCircle2, RefreshCw, Cpu, Layers, Tag, Eye, AlertCircle, Loader2 } from 'lucide-react';
 import { PRODUCT_PRESETS, ProductPreset } from '../lib/mockData';
 import { soundFX } from './AudioFX';
+
+export interface BackendScrapedProduct {
+  platform: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  rating?: number;
+  productUrl: string;
+  imageUrl?: string;
+  inStock?: boolean;
+}
+
+export interface ProductSearchResponse {
+  success: boolean;
+  searchId: string;
+  query: string;
+  totalFound: number;
+  products: BackendScrapedProduct[];
+}
 
 interface ImageScannerProps {
   currentProduct: ProductPreset;
   onSelectPreset: (preset: ProductPreset) => void;
-  onCustomImageUpload: (imageUrl: string, customName?: string) => void;
+  onCustomImageUpload: (
+    imageUrl: string,
+    customName?: string,
+    backendResult?: ProductSearchResponse
+  ) => void;
   isScanning: boolean;
   onTriggerScan: () => void;
 }
+
+const formatInrPrice = (amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return '₹0';
+  const inrVal = amount < 1000 && amount > 0 ? Math.round(amount * 86.5) : Math.round(amount);
+  return `₹${inrVal.toLocaleString('en-IN')}`;
+};
 
 export default function ImageScanner({
   currentProduct,
@@ -23,6 +53,9 @@ export default function ImageScanner({
   const [isDragOver, setIsDragOver] = useState(false);
   const [customUrlInput, setCustomUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -39,20 +72,90 @@ export default function ImageScanner({
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      handleFileSelected(file);
+      handleUploadimage(file);
     }
   };
 
   const handleFileSelected = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        soundFX.playScanBeep();
-        onCustomImageUpload(event.target.result as string, file.name.replace(/\.[^/.]+$/, ''));
+    handleUploadimage(file);
+  };
+
+  const handleUploadimage = async (selectedFile?: File) => {
+    const file = selectedFile || (fileInputRef.current?.files && fileInputRef.current.files[0]);
+    if (!file) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (JPEG, PNG, WebP).');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadStatus('Uploading image to AI Vision Scraper...');
+    soundFX.playScanBeep();
+
+    // Instant local image preview in the HUD frame
+    const previewUrl = URL.createObjectURL(file);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token =
+        (typeof window !== 'undefined' &&
+          (sessionStorage.getItem('access_token')))
+
+      setUploadStatus('Multi-agent vision swarm identifying SKU & scraping marketplaces...');
+
+      const response = await axios.post<ProductSearchResponse>(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/product-search/upload-image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data && response.data.success) {
+        soundFX.playDealFound();
+        setUploadStatus(
+          `Identified "${response.data.query}" • Found ${response.data.totalFound} listings!`
+        );
+        onCustomImageUpload(previewUrl, response.data.query, response.data);
+      } else {
+        throw new Error('Image search did not return a successful response.');
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      console.error('Error in handleUploadimage:', err);
+      soundFX.playClick();
+      let errorMsg = 'Failed to analyze product image via backend swarm.';
+      if (axios.isAxiosError(err)) {
+        errorMsg =
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          errorMsg;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      setUploadError(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+
+      // Graceful fallback: still preview image locally
+      onCustomImageUpload(previewUrl, file.name.replace(/\.[^/.]+$/, ''));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setTimeout(() => {
+        setUploadStatus(null);
+        setUploadError(null);
+      }, 7000);
+    }
   };
 
   const handleUrlSubmit = (e: React.FormEvent) => {
@@ -95,7 +198,7 @@ export default function ImageScanner({
               soundFX.playClick();
               setShowUrlInput(!showUrlInput);
             }}
-            className="px-3.5 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-300 text-xs font-medium transition flex items-center gap-1.5"
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-300 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
           >
             <ImageIcon className="w-3.5 h-3.5" />
             <span>{showUrlInput ? 'Hide URL' : 'Paste Image URL'}</span>
@@ -103,12 +206,25 @@ export default function ImageScanner({
 
           <button
             onClick={() => {
-              fileInputRef.current?.click();
+              if (!isUploading) {
+                soundFX.playClick();
+                handleUploadimage();
+              }
             }}
-            className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)] transition flex items-center gap-1.5"
+            disabled={isUploading}
+            className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-60 text-white text-xs font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)] transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload Image</span>
+            {isUploading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>Uploading & Scanning...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload Image</span>
+              </>
+            )}
           </button>
           
           <input
@@ -118,12 +234,46 @@ export default function ImageScanner({
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files[0]) {
-                handleFileSelected(e.target.files[0]);
+                handleUploadimage(e.target.files[0]);
               }
             }}
           />
         </div>
       </div>
+
+      {/* Uploading Status / Error Notification Pill */}
+      {(isUploading || uploadStatus || uploadError) && (
+        <div
+          className={`mb-5 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between border transition-all ${
+            uploadError
+              ? 'bg-rose-950/70 border-rose-500/40 text-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.15)]'
+              : isUploading
+              ? 'bg-cyan-950/70 border-cyan-500/40 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.15)] animate-pulse'
+              : 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {isUploading ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400 shrink-0" />
+            ) : uploadError ? (
+              <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            )}
+            <span className="font-mono text-[11px] sm:text-xs">
+              {uploadError || uploadStatus}
+            </span>
+          </div>
+          {uploadError && (
+            <button
+              onClick={() => setUploadError(null)}
+              className="text-[10px] text-rose-400 hover:text-rose-200 underline font-mono ml-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
 
       {/* URL Input Bar */}
       {showUrlInput && (
@@ -195,10 +345,10 @@ export default function ImageScanner({
             </div>
 
             {/* Animated Laser Scanning Beam */}
-            {isScanning && (
+            {(isScanning || isUploading) && (
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_#00f0ff,0_0_40px_#00f0ff] animate-[scan_2s_ease-in-out_infinite] z-20">
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-cyan-500 text-[9px] font-mono font-bold text-slate-950 rounded-full shadow-lg">
-                  SCANNING MODEL FEATURES...
+                  {isUploading ? 'VISION SWARM UPLOADING...' : 'SCANNING MODEL FEATURES...'}
                 </div>
               </div>
             )}
@@ -270,9 +420,9 @@ export default function ImageScanner({
                 Lowest Cross-Platform Price
               </div>
               <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight flex items-baseline gap-2">
-                ${currentProduct.priceAnalytics.lowestPrice.toFixed(2)}
+                {formatInrPrice(currentProduct.priceAnalytics.lowestPrice)}
                 <span className="text-xs font-normal text-slate-400 line-through">
-                  ${currentProduct.priceAnalytics.highestPrice.toFixed(2)}
+                  {formatInrPrice(currentProduct.priceAnalytics.highestPrice)}
                 </span>
               </div>
             </div>
@@ -282,7 +432,7 @@ export default function ImageScanner({
                 Max Arbitrage Savings
               </div>
               <div className="text-base font-bold text-cyan-300 font-mono">
-                +${currentProduct.priceAnalytics.savingsPotential.toFixed(2)} OFF
+                +{formatInrPrice(currentProduct.priceAnalytics.savingsPotential)} OFF
               </div>
             </div>
           </div>
@@ -290,7 +440,7 @@ export default function ImageScanner({
       </div>
 
       {/* Preset Showcase Tray */}
-      <div className="mt-7 pt-5 border-t border-indigo-500/20">
+      {/* <div className="mt-7 pt-5 border-t border-indigo-500/20">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-mono uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -328,7 +478,7 @@ export default function ImageScanner({
                   {preset.brand}
                 </span>
                 <span className="text-[9px] font-mono text-emerald-400">
-                  ${preset.priceAnalytics.lowestPrice.toFixed(0)}
+                  {formatInrPrice(preset.priceAnalytics.lowestPrice)}
                 </span>
                 {isSelected && (
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full border-2 border-[#090f2b]" />
@@ -337,7 +487,7 @@ export default function ImageScanner({
             );
           })}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

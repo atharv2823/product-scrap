@@ -21,10 +21,14 @@ export default function PriceComparisonBoard({
   const [filterCondition, setFilterCondition] = useState<'all' | 'new' | 'refurbished'>('all');
   const [selectedDealModal, setSelectedDealModal] = useState<PlatformDeal | null>(null);
 
-  const curr = CURRENCY_SYMBOLS[activeCurrency] || CURRENCY_SYMBOLS.USD;
+  const curr = CURRENCY_SYMBOLS[activeCurrency] || CURRENCY_SYMBOLS.INR;
 
-  const formatPrice = (usdAmount: number) => {
-    const converted = usdAmount * curr.rate;
+  const formatPrice = (amount: number) => {
+    if (activeCurrency === 'INR') {
+      const inrVal = amount < 1000 && amount > 0 ? Math.round(amount * 86.5) : Math.round(amount);
+      return `₹${inrVal.toLocaleString('en-IN')}`;
+    }
+    const converted = amount * curr.rate;
     return `${curr.symbol}${converted.toFixed(2)}`;
   };
 
@@ -153,7 +157,7 @@ export default function PriceComparisonBoard({
       </div>
 
       {/* Champion Lowest Price Banner Card */}
-      {championDeal && (
+      {/* {championDeal && (
         <div className="relative rounded-3xl p-6 sm:p-8 mb-8 overflow-hidden backdrop-blur-2xl bg-gradient-to-r from-emerald-950/40 via-[#07122e]/90 to-indigo-950/50 border-2 border-emerald-400/50 shadow-[0_0_40px_rgba(16,185,129,0.18)]">
           <div className="absolute top-0 right-0 transform translate-x-8 -translate-y-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -228,7 +232,7 @@ export default function PriceComparisonBoard({
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Grid of All Store Platform Deals */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
