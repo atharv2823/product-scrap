@@ -428,11 +428,11 @@ export default function Home() {
         />
 
         {/* 4. Live Multi-Agent Swarm Pipeline */}
-        <AgentPipeline
+        {/* <AgentPipeline
           currentStage={agentStage}
           isComplete={isAgentComplete}
           productName={currentProduct.name}
-        />
+        /> */}
 
         {/* 5. Live Multi-Platform Price Comparison Board */}
         <PriceComparisonBoard
@@ -454,12 +454,12 @@ export default function Home() {
       />
 
       {/* 8. Price Alert Subscription Modal */}
-      <PriceAlertModal
+      {/* <PriceAlertModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
         product={currentProduct}
         activeCurrency={activeCurrency}
-      />
+      /> */}
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-indigo-500/15 backdrop-blur-xl bg-[#070b20]/80 py-8 mt-12 text-center text-xs text-slate-500">
