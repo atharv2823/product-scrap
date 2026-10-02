@@ -1,6 +1,8 @@
 export interface PlatformDeal {
   id: string;
-  platform: 'Amazon' | 'Walmart' | 'Best Buy' | 'eBay' | 'Target' | 'AliExpress' | 'B&H Photo' | 'Flipkart';
+  platform: string;
+  title?: string;
+  imageUrl?: string;
   logoColor: string;
   sellerName: string;
   sellerRating: number;
@@ -11,13 +13,13 @@ export interface PlatformDeal {
   inStock: boolean;
   stockCount?: number;
   shipping: {
-    type: 'Prime Next-Day' | 'Free 2-Day' | 'Express Delivery' | 'Standard Free' | '$4.99 Standard';
+    type: 'Prime Next-Day' | 'Free 2-Day' | 'Express Delivery' | 'Standard Free' | '$4.99 Standard' | string;
     cost: number;
     estimatedDays: string;
   };
-  condition: 'Brand New' | 'Open Box - Like New' | 'Refurbished (Certified)';
+  condition: 'Brand New' | 'Open Box - Like New' | 'Refurbished (Certified)' | string;
   returnPolicy: string;
-  dealTag?: 'Lowest Price' | 'Best Value' | 'Fastest Delivery' | 'Certified Refurbished';
+  dealTag?: 'Lowest Price' | 'Best Value' | 'Fastest Delivery' | 'Certified Refurbished' | string;
   couponCode?: string;
   couponDiscount?: string;
   productUrl: string;

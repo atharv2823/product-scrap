@@ -17,10 +17,20 @@ export interface BackendScrapedProduct {
   inStock?: boolean;
 }
 
+export interface ProductAnalysis {
+  productName?: string;
+  brand?: string;
+  category?: string;
+  color?: string;
+  searchQuery?: string;
+}
+
 export interface ProductSearchResponse {
   success: boolean;
   searchId: string;
-  query: string;
+  query?: string;
+  userFeedback?: string;
+  analysis?: ProductAnalysis;
   totalFound: number;
   products: BackendScrapedProduct[];
 }
@@ -54,9 +64,16 @@ export default function ImageScanner({
   const [customUrlInput, setCustomUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (uploadedPreviewUrl && currentProduct.imageUrl && currentProduct.imageUrl !== uploadedPreviewUrl) {
+      setUploadedPreviewUrl(null);
+    }
+  }, [currentProduct.imageUrl]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -99,6 +116,7 @@ export default function ImageScanner({
 
     // Instant local image preview in the HUD frame
     const previewUrl = URL.createObjectURL(file);
+    setUploadedPreviewUrl(previewUrl);
 
     try {
       const formData = new FormData();
@@ -122,10 +140,16 @@ export default function ImageScanner({
 
       if (response.data && response.data.success) {
         soundFX.playDealFound();
+        const detectedName =
+          response.data.analysis?.productName ||
+          response.data.query ||
+          response.data.analysis?.searchQuery ||
+          'Detected Product';
         setUploadStatus(
-          `Identified "${response.data.query}" • Found ${response.data.totalFound} listings!`
+          response.data.userFeedback ||
+          `Identified "${detectedName}" • Found ${response.data.totalFound} listings!`
         );
-        onCustomImageUpload(previewUrl, response.data.query, response.data);
+        onCustomImageUpload(previewUrl, detectedName, response.data);
       } else {
         throw new Error('Image search did not return a successful response.');
       }
@@ -162,6 +186,7 @@ export default function ImageScanner({
     e.preventDefault();
     if (!customUrlInput.trim()) return;
     soundFX.playScanBeep();
+    setUploadedPreviewUrl(customUrlInput.trim());
     onCustomImageUpload(customUrlInput.trim(), 'Custom Image Input');
     setCustomUrlInput('');
     setShowUrlInput(false);
@@ -169,12 +194,6 @@ export default function ImageScanner({
 
   return (
     <div className="w-full relative rounded-3xl backdrop-blur-2xl bg-[#090f2b]/80 border border-cyan-500/25 p-5 sm:p-8 shadow-[0_0_50px_rgba(6,182,212,0.12)] overflow-hidden">
-      
-      {/* Decorative Corner Cyber Accents */}
-      <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-400 rounded-tl-2xl pointer-events-none" />
-      <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-indigo-400 rounded-tr-2xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-400 rounded-bl-2xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-indigo-400 rounded-br-2xl pointer-events-none" />
 
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -315,10 +334,10 @@ export default function ImageScanner({
             {/* Background Image Display */}
             <div className="absolute inset-0 flex items-center justify-center p-4">
               <img
-                src={currentProduct.imageUrl}
+                src={uploadedPreviewUrl || currentProduct.imageUrl}
                 alt={currentProduct.name}
                 className={`w-full h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-700 group-hover:scale-105 ${
-                  isScanning ? 'brightness-110 saturate-125' : ''
+                  isScanning || isUploading ? 'brightness-110 saturate-125' : ''
                 }`}
               />
             </div>
@@ -355,13 +374,9 @@ export default function ImageScanner({
 
             {/* Status Floating Pill */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
-              <div className="px-3 py-1 rounded-lg bg-[#070d24]/90 border border-cyan-400/30 text-[11px] font-mono text-cyan-300 backdrop-blur-md flex items-center gap-1.5">
-                <Cpu className="w-3 h-3 text-cyan-400 animate-spin" />
-                <span>AI Confidence: {currentProduct.confidenceScore}%</span>
-              </div>
               
               <div className="px-3 py-1 rounded-lg bg-indigo-950/90 border border-indigo-400/30 text-[11px] font-mono text-indigo-300 backdrop-blur-md">
-                <span>{currentProduct.brand}</span>
+                <span>{isUploading ? 'Analyzing Image...' : (currentProduct.brand || 'Identified Brand')}</span>
               </div>
             </div>
 
@@ -383,19 +398,19 @@ export default function ImageScanner({
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 border border-cyan-400/30 text-cyan-300">
                 {currentProduct.category}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 border border-indigo-400/30 text-indigo-300">
+              {/* <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 border border-indigo-400/30 text-indigo-300">
                 SKU: {currentProduct.sku}
-              </span>
+              </span> */}
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Verified Match
               </span>
             </div>
 
             <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-              {currentProduct.name}
+              {isUploading ? 'Scanning Uploaded Image...' : currentProduct.name}
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 line-clamp-2">
-              {currentProduct.tagline}
+              {isUploading ? 'AI vision swarm is extracting product features and searching stores...' : currentProduct.tagline}
             </p>
           </div>
 
@@ -414,28 +429,44 @@ export default function ImageScanner({
           </div>
 
           {/* Quick Price Arbitrage Snapshot */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-slate-900/60 border border-cyan-500/30">
-            <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
-                Lowest Cross-Platform Price
+          {currentProduct.deals && currentProduct.deals.length > 0 && currentProduct.priceAnalytics?.lowestPrice > 0 ? (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-slate-900/60 border border-cyan-500/30">
+              <div>
+                <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
+                  Lowest Cross-Platform Price
+                </div>
+                <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight flex items-baseline gap-2">
+                  {formatInrPrice(currentProduct.priceAnalytics.lowestPrice)}
+                  {currentProduct.priceAnalytics.highestPrice > currentProduct.priceAnalytics.lowestPrice && (
+                    <span className="text-xs font-normal text-slate-400 line-through">
+                      {formatInrPrice(currentProduct.priceAnalytics.highestPrice)}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight flex items-baseline gap-2">
-                {formatInrPrice(currentProduct.priceAnalytics.lowestPrice)}
-                <span className="text-xs font-normal text-slate-400 line-through">
-                  {formatInrPrice(currentProduct.priceAnalytics.highestPrice)}
+
+              <div className="text-right">
+                <div className="text-[10px] uppercase font-mono tracking-wider text-cyan-300">
+                  Max Arbitrage Savings
+                </div>
+                <div className="text-base font-bold text-cyan-300 font-mono">
+                  +{formatInrPrice(currentProduct.priceAnalytics.savingsPotential)} OFF
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#060a22]/80 border border-indigo-500/20 text-slate-400">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-xs font-mono text-slate-300">
+                  Live Pricing Unavailable
                 </span>
               </div>
+              <span className="text-[10px] font-mono text-amber-400/80 uppercase tracking-wider bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
+                0 Listings Found
+              </span>
             </div>
-
-            <div className="text-right">
-              <div className="text-[10px] uppercase font-mono tracking-wider text-cyan-300">
-                Max Arbitrage Savings
-              </div>
-              <div className="text-base font-bold text-cyan-300 font-mono">
-                +{formatInrPrice(currentProduct.priceAnalytics.savingsPotential)} OFF
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

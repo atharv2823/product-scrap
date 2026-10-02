@@ -53,25 +53,29 @@ export default function PriceComparisonBoard({
     setSelectedDealModal(deal);
   };
 
+  const hasDeals = Boolean(product.deals && product.deals.length > 0);
+
   // Filter & sort logic
-  const filteredDeals = product.deals.filter((deal) => {
-    if (filterCondition === 'new') return deal.condition === 'Brand New';
-    if (filterCondition === 'refurbished') return deal.condition.includes('Refurbished') || deal.condition.includes('Open Box');
+  const filteredDeals = (product.deals || []).filter((deal) => {
+    if (filterCondition === 'new') return deal.inStock !== false;
+    if (filterCondition === 'refurbished') return deal.condition?.includes('Refurbished') || deal.condition?.includes('Open Box');
     return true;
   });
 
   const sortedDeals = [...filteredDeals].sort((a, b) => {
     if (sortBy === 'price') return a.price - b.price;
     if (sortBy === 'discount') {
-      const discountA = ((a.originalPrice - a.price) / a.originalPrice) * 100;
-      const discountB = ((b.originalPrice - b.price) / b.originalPrice) * 100;
+      const discountA = a.originalPrice && a.originalPrice > a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
+      const discountB = b.originalPrice && b.originalPrice > b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
       return discountB - discountA;
     }
-    if (sortBy === 'rating') return b.sellerRating - a.sellerRating;
+    if (sortBy === 'rating') return (b.sellerRating || 0) - (a.sellerRating || 0);
     return 0;
   });
 
-  const championDeal = product.deals.reduce((prev, curr) => (curr.price < prev.price ? curr : prev), product.deals[0]);
+  const championDeal = product.deals && product.deals.length > 0
+    ? product.deals.reduce((prev, curr) => (curr.price < prev.price ? curr : prev), product.deals[0])
+    : null;
 
   return (
     <section className="w-full mt-6 mb-12">
@@ -87,14 +91,15 @@ export default function PriceComparisonBoard({
             Live Price Comparison Across All Stores
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Real-time price crawler results with active coupon codes, shipping estimates, and stock verification.
+            Real-time price crawler results with active listings, platform images, ratings, and instant purchase links.
           </p>
         </div>
 
         {/* Filters & Sorting Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {hasDeals && (
+          <div className="flex items-center gap-2 flex-wrap">
           
-          {/* Condition Filter */}
+          {/* Condition / Stock Filter */}
           <div className="flex items-center bg-[#070b22] p-1 rounded-xl border border-indigo-500/20 text-xs">
             <button
               onClick={() => {
@@ -120,20 +125,7 @@ export default function PriceComparisonBoard({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Brand New
-            </button>
-            <button
-              onClick={() => {
-                setFilterCondition('refurbished');
-                soundFX.playClick();
-              }}
-              className={`px-3 py-1 rounded-lg transition ${
-                filterCondition === 'refurbished'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-semibold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Refurbished
+              In Stock Only
             </button>
           </div>
 
@@ -154,240 +146,177 @@ export default function PriceComparisonBoard({
             <ArrowUpDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           </div>
         </div>
+        )}
       </div>
 
-      {/* Champion Lowest Price Banner Card */}
-      {/* {championDeal && (
-        <div className="relative rounded-3xl p-6 sm:p-8 mb-8 overflow-hidden backdrop-blur-2xl bg-gradient-to-r from-emerald-950/40 via-[#07122e]/90 to-indigo-950/50 border-2 border-emerald-400/50 shadow-[0_0_40px_rgba(16,185,129,0.18)]">
-          <div className="absolute top-0 right-0 transform translate-x-8 -translate-y-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            
-            <div className="lg:col-span-7 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                <span>AI Verified Lowest Price Deal</span>
-              </div>
-
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                Best Arbitrage at <span className="text-emerald-400">{championDeal.platform}</span>
-              </h3>
-
-              <p className="text-xs sm:text-sm text-slate-300">
-                You save <span className="font-bold text-white font-mono">{formatPrice(championDeal.originalPrice - championDeal.price)}</span> ({Math.round(((championDeal.originalPrice - championDeal.price) / championDeal.originalPrice) * 100)}% discount) compared to standard MSRP. Verified seller: <span className="text-cyan-300 font-medium">{championDeal.sellerName}</span> ({championDeal.sellerRating} ★ / {championDeal.sellerReviewsCount.toLocaleString()} reviews).
-              </p>
-
-              <div className="flex items-center gap-4 flex-wrap text-xs text-slate-300 pt-1">
-                <div className="flex items-center gap-1.5 text-emerald-300">
-                  <Truck className="w-4 h-4" />
-                  <span>{championDeal.shipping.type} ({championDeal.shipping.estimatedDays})</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-indigo-300">
-                  <Shield className="w-4 h-4" />
-                  <span>{championDeal.returnPolicy}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5 flex flex-col sm:items-end justify-center space-y-3">
-              <div className="text-right">
-                <span className="text-xs font-mono uppercase tracking-widest text-slate-400">Total Price</span>
-                <div className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono">
-                  {formatPrice(championDeal.price)}
-                  <span className="text-sm font-normal text-slate-400 line-through ml-2">
-                    {formatPrice(championDeal.originalPrice)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <button
-                  onClick={() => handleChampionClick(championDeal)}
-                  className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-[0_0_25px_rgba(16,185,129,0.4)] transition flex items-center justify-center gap-2 group"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Buy on {championDeal.platform}</span>
-                  <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                </button>
-              </div>
-
-              {championDeal.couponCode && (
-                <div className="flex items-center gap-2 p-2 rounded-xl bg-[#04081a]/80 border border-cyan-500/30 text-xs">
-                  <Tag className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="font-mono font-bold text-cyan-300">{championDeal.couponCode}</span>
-                  <button
-                    onClick={() => handleCopyCoupon(championDeal.couponCode!)}
-                    className="p-1 hover:text-white transition text-slate-400"
-                    title="Copy Coupon"
-                  >
-                    {copiedCoupon === championDeal.couponCode ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                  <span className="text-[10px] text-slate-400">({championDeal.couponDiscount})</span>
-                </div>
-              )}
-            </div>
+      {/* Grid of All Store Platform Deals or Server Pressure Alert */}
+      {!hasDeals ? (
+        <div className="w-full rounded-2xl border border-amber-500/30 bg-[#090d24]/90 p-8 sm:p-12 text-center backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center space-y-4 my-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
+            <AlertCircle className="w-8 h-8 animate-pulse" />
+          </div>
+          <div className="max-w-xl space-y-2">
+            <h3 className="text-xl sm:text-2xl font-bold text-amber-300 tracking-tight">
+              Currently server running the High Pressure, Please Try again later
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-400 font-mono">
+              Live marketplace crawlers were unable to retrieve listings at this moment. Please check back or try scanning another product.
+            </p>
           </div>
         </div>
-      )} */}
-
-      {/* Grid of All Store Platform Deals */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      ) : sortedDeals.length === 0 ? (
+        <div className="w-full rounded-2xl border border-slate-700/50 bg-[#090d24]/90 p-8 text-center backdrop-blur-xl">
+          <p className="text-sm text-slate-300">No deals match the selected filter.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {sortedDeals.map((deal) => {
-          const discountPct = Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100);
+          const hasDiscount = Boolean(deal.originalPrice && deal.originalPrice > deal.price);
+          const discountPct = hasDiscount
+            ? Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100)
+            : 0;
           const isLowest = deal.id === championDeal?.id;
 
           return (
             <div
               key={deal.id}
-              className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 backdrop-blur-xl border ${
+              className={`group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 backdrop-blur-xl border ${
                 isLowest
-                  ? 'bg-[#08152e]/80 border-emerald-400/40 shadow-[0_0_20px_rgba(16,185,129,0.12)]'
-                  : 'bg-[#080d24]/80 border-indigo-500/15 hover:border-indigo-400/40 hover:bg-[#0b1333]/90'
+                  ? 'bg-[#08152e]/90 border-emerald-400/50 shadow-[0_0_25px_rgba(16,185,129,0.15)]'
+                  : 'bg-[#080d24]/90 border-indigo-500/20 hover:border-cyan-400/50 hover:bg-[#0b1333]/95 shadow-lg'
               }`}
             >
-              {/* Card Header: Platform badge & Tag */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                {/* Header: Platform badge & Stock badge */}
+                <div className="flex items-center justify-between mb-3 gap-2">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: deal.logoColor }}
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: deal.logoColor || '#06b6d4' }}
                     />
-                    <span className="font-extrabold text-base text-white tracking-wide">
+                    <span className="font-extrabold text-sm sm:text-base text-white tracking-wide uppercase">
                       {deal.platform}
                     </span>
                   </div>
 
-                  {deal.dealTag && (
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider uppercase border ${
-                        deal.dealTag === 'Lowest Price'
-                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-400/40'
-                          : deal.dealTag === 'Fastest Delivery'
-                          ? 'bg-amber-950/80 text-amber-300 border-amber-400/40'
-                          : 'bg-indigo-950/80 text-indigo-300 border-indigo-400/40'
-                      }`}
-                    >
-                      {deal.dealTag}
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {deal.inStock ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        In Stock
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-rose-950/80 text-rose-300 border border-rose-500/30">
+                        Out of Stock
+                      </span>
+                    )}
+
+                    {deal.dealTag && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider uppercase border ${
+                          deal.dealTag === 'Lowest Price'
+                            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-400/40'
+                            : deal.dealTag === 'Fastest Delivery'
+                            ? 'bg-amber-950/80 text-amber-300 border-amber-400/40'
+                            : 'bg-indigo-950/80 text-indigo-300 border-indigo-400/40'
+                        }`}
+                      >
+                        {deal.dealTag}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scraped Product Image Preview */}
+                {deal.imageUrl ? (
+                  <div className="relative w-full h-48 mb-3.5 rounded-xl overflow-hidden bg-[#040816]/90 border border-slate-800/80 flex items-center justify-center p-3 group-hover:border-cyan-500/40 transition">
+                    <img
+                      src={deal.imageUrl}
+                      alt={deal.title || deal.sellerName || 'Product Image'}
+                      className="w-full h-full object-contain filter drop-shadow-md group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#040816]/90 backdrop-blur-md border border-slate-700/60 text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider">
+                      {deal.platform}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Scraped Product Title */}
+                <h4
+                  className="text-xs sm:text-sm font-bold text-white line-clamp-2 mb-2 leading-snug group-hover:text-cyan-300 transition-colors"
+                  title={deal.title || deal.sellerName}
+                >
+                  {deal.title || deal.sellerName}
+                </h4>
+
+                {/* Seller & Rating info */}
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+                  <span className="truncate max-w-[150px] text-[11px] font-mono text-slate-400">
+                    {deal.sellerName || `${deal.platform} Store`}
+                  </span>
+                  {deal.sellerRating ? (
+                    <span className="text-amber-400 font-bold text-xs flex items-center gap-1 font-mono">
+                      ★ {deal.sellerRating}
+                      {deal.sellerReviewsCount ? (
+                        <span className="text-slate-500 text-[10px] font-normal">
+                          ({deal.sellerReviewsCount.toLocaleString()})
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 text-[10px] font-mono font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Verified Listing
                     </span>
                   )}
                 </div>
-
-                {/* Seller info & Condition */}
-                <div className="space-y-1 mb-4">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="truncate max-w-[170px]" title={deal.sellerName}>
-                      {deal.sellerName}
-                    </span>
-                    <span className="text-amber-400 font-semibold font-mono">
-                      {deal.sellerRating} ★ ({deal.sellerReviewsCount.toLocaleString()})
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700/50 text-[10px] font-mono text-slate-300">
-                      {deal.condition}
-                    </span>
-                    {deal.stockCount && deal.stockCount <= 10 && (
-                      <span className="text-[10px] font-mono text-rose-400 flex items-center gap-1">
-                        <AlertCircle className="w-2.5 h-2.5" /> Only {deal.stockCount} left
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mini Price Sparkline History Vector */}
-                <div className="p-2.5 rounded-xl bg-[#040816]/70 border border-slate-800/80 mb-4">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1.5">
-                    <span>30-Day Price Trend</span>
-                    <span className="text-emerald-400 flex items-center gap-0.5">
-                      <TrendingDown className="w-3 h-3" /> -{discountPct}% Drop
-                    </span>
-                  </div>
-                  
-                  {/* SVG Sparkline */}
-                  <svg className="w-full h-10 overflow-visible" viewBox="0 0 200 40">
-                    <defs>
-                      <linearGradient id={`grad-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00f0ff" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#00f0ff" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <polyline
-                      fill="none"
-                      stroke="#00f0ff"
-                      strokeWidth="2"
-                      points={deal.priceHistory
-                        .map((p, idx) => {
-                          const x = (idx / (deal.priceHistory.length - 1)) * 200;
-                          // Normalized y
-                          const minP = Math.min(...deal.priceHistory.map((d) => d.price));
-                          const maxP = Math.max(...deal.priceHistory.map((d) => d.price)) || minP + 1;
-                          const y = 35 - ((p.price - minP) / (maxP - minP || 1)) * 30;
-                          return `${x},${y}`;
-                        })
-                        .join(' ')}
-                    />
-                  </svg>
-                </div>
               </div>
 
-              {/* Card Footer: Price & Action */}
-              <div className="space-y-3 pt-2 border-t border-slate-800/60">
+              {/* Card Footer: Price & Direct Link Action */}
+              <div className="space-y-3 pt-3 border-t border-slate-800/70">
                 <div className="flex items-baseline justify-between">
                   <div>
-                    <div className="text-2xl font-black text-white font-mono">
+                    <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
                       {formatPrice(deal.price)}
                     </div>
-                    {deal.originalPrice > deal.price && (
-                      <span className="text-xs text-slate-400 line-through">
-                        {formatPrice(deal.originalPrice)}
-                      </span>
-                    )}
+                    {hasDiscount ? (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-slate-400 line-through font-mono">
+                          {formatPrice(deal.originalPrice)}
+                        </span>
+                        <span className="text-[10px] text-emerald-400 font-mono font-semibold">
+                          (Save {formatPrice(deal.originalPrice - deal.price)})
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="text-right">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-emerald-400 text-xs font-bold font-mono">
-                      {discountPct}% OFF
-                    </span>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      {deal.shipping.type}
+                  {discountPct > 0 && (
+                    <div className="text-right">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/40 text-emerald-400 text-xs font-black font-mono shadow-sm">
+                        {discountPct}% OFF
+                      </span>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Coupon bar if available */}
-                {deal.couponCode && (
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-[#060c24] border border-cyan-500/20 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-cyan-300">
-                      <Tag className="w-3 h-3 text-cyan-400" />
-                      <span className="font-mono font-bold">{deal.couponCode}</span>
-                    </div>
-                    <button
-                      onClick={() => handleCopyCoupon(deal.couponCode!)}
-                      className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-[10px] font-mono transition"
-                    >
-                      {copiedCoupon === deal.couponCode ? 'COPIED!' : 'COPY CODE'}
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => handleChampionClick(deal)}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-indigo-950 border border-indigo-500/30 hover:border-cyan-400 text-slate-200 hover:text-white text-xs font-bold tracking-wide transition flex items-center justify-center gap-2 group"
+                {/* Direct Action Link Button */}
+                <a
+                  href={deal.productUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs tracking-wide transition flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] group/btn cursor-pointer"
                 >
-                  <span>Go to Store Deal</span>
-                  <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-cyan-400" />
-                </button>
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <span>Buy on {deal.platform}</span>
+                  <ExternalLink className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                </a>
               </div>
             </div>
           );
         })}
       </div>
+      )}
 
       {/* Deal Checkout Simulation Modal */}
       {selectedDealModal && (
@@ -403,26 +332,44 @@ export default function PriceComparisonBoard({
               </div>
               <button
                 onClick={() => setSelectedDealModal(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {selectedDealModal.imageUrl && (
+              <div className="w-full h-36 rounded-2xl bg-[#040718] border border-slate-800/80 p-2 flex items-center justify-center overflow-hidden">
+                <img
+                  src={selectedDealModal.imageUrl}
+                  alt={selectedDealModal.title || product.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
             <div className="p-4 rounded-2xl bg-[#040718] border border-slate-800 space-y-2">
-              <div className="text-xs text-slate-400 font-mono">PRODUCT TO ORDER</div>
-              <div className="font-bold text-sm text-white">{product.name}</div>
+              <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">SELECTED STORE ITEM</div>
+              <div className="font-bold text-xs sm:text-sm text-white line-clamp-2 leading-snug">
+                {selectedDealModal.title || product.name}
+              </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                <span className="text-xs text-slate-400">Merchant Store:</span>
-                <span className="text-xs text-cyan-300 font-semibold">{selectedDealModal.sellerName}</span>
+                <span className="text-xs text-slate-400">Store Platform:</span>
+                <span className="text-xs text-cyan-300 font-semibold">{selectedDealModal.platform}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Total Price:</span>
+                <span className="text-xs text-slate-400">Merchant / Seller:</span>
+                <span className="text-xs text-slate-300">{selectedDealModal.sellerName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400">Deal Price:</span>
                 <span className="text-lg font-black text-emerald-400 font-mono">{formatPrice(selectedDealModal.price)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Delivery Method:</span>
-                <span className="text-xs text-slate-300">{selectedDealModal.shipping.type}</span>
+                <span className="text-xs text-slate-400">Availability:</span>
+                <span className="text-xs font-mono text-emerald-400 font-semibold">
+                  {selectedDealModal.inStock ? 'In Stock • Ready to Order' : 'Out of Stock'}
+                </span>
               </div>
             </div>
 

@@ -229,85 +229,114 @@ export default function Home() {
       savingsPotential: 90.00
     };
 
-    if (searchResult && searchResult.products && searchResult.products.length > 0) {
-      name = searchResult.query || name;
-      brand = name.split(' ')[0] || brand;
+    if (searchResult) {
+      name =
+        searchResult.analysis?.productName ||
+        searchResult.query ||
+        searchResult.analysis?.searchQuery ||
+        customName ||
+        name;
+      brand =
+        searchResult.analysis?.brand ||
+        (searchResult.analysis?.productName ? searchResult.analysis.productName.split(' ')[0] : '') ||
+        (name ? name.split(' ')[0] : '') ||
+        brand;
 
-      const platformColors: Record<string, string> = {
-        amazon: '#ff9900',
-        flipkart: '#2874f0',
-        ajio: '#2c4152',
-        walmart: '#0071dc',
-        'best buy': '#0046be',
-        ebay: '#e53238',
-      };
+      const uniquePlatforms =
+        searchResult.products && searchResult.products.length > 0
+          ? [...new Set(searchResult.products.map((p) => p.platform?.toUpperCase()))].filter(Boolean).join(', ')
+          : 'None detected';
 
-      deals = searchResult.products.map((p, idx) => {
-        const rawPlatform = (p.platform || 'store').toLowerCase();
-        const displayPlatform = rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1);
-        const price = Number(p.price) || 0;
-        const originalPrice = Number(p.originalPrice) || Math.round(price * 1.25);
-
-        return {
-          id: `deal-${searchResult.searchId || Date.now()}-${idx}`,
-          platform: displayPlatform as any,
-          logoColor: platformColors[rawPlatform] || '#06b6d4',
-          sellerName: p.title.length > 40 ? p.title.slice(0, 38) + '...' : p.title,
-          sellerRating: Number(p.rating) || 4.4,
-          sellerReviewsCount: Math.floor(1200 + Math.random() * 8800),
-          price: price,
-          originalPrice: originalPrice,
-          currency: 'INR',
-          inStock: p.inStock ?? true,
-          shipping: {
-            type: 'Express Delivery' as const,
-            cost: 0,
-            estimatedDays: '2-3 Business Days'
-          },
-          condition: 'Brand New' as const,
-          returnPolicy: '7-10 Days Replacement/Return',
-          dealTag: idx === 0 ? ('Lowest Price' as const) : idx === 1 ? ('Best Value' as const) : undefined,
-          couponCode: idx === 0 ? 'SNAP10OFF' : undefined,
-          couponDiscount: idx === 0 ? 'Verified Instant Coupon' : undefined,
-          productUrl: p.productUrl || '#',
-          priceHistory: [
-            { date: '15 Days Ago', price: Math.round(price * 1.08) },
-            { date: '7 Days Ago', price: Math.round(price * 1.04) },
-            { date: 'Today', price: price }
-          ]
-        };
-      });
-
-      const sorted = [...deals].sort((a, b) => a.price - b.price);
-      const lowest = sorted[0]?.price || 0;
-      const highest = sorted[sorted.length - 1]?.price || 0;
-      const avg = Math.round(deals.reduce((acc, d) => acc + d.price, 0) / deals.length);
-
-      priceAnalytics = {
-        lowestPrice: lowest,
-        highestPrice: highest,
-        averagePrice: avg,
-        allTimeLow: lowest,
-        priceTrend: 'dropping',
-        savingsPotential: Math.max(0, highest - lowest)
-      };
-
-      const uniquePlatforms = [...new Set(searchResult.products.map((p) => p.platform.toUpperCase()))].join(', ');
       specs = {
-        'Search Query': searchResult.query,
-        'Found Listings': `${searchResult.totalFound || deals.length} Live Items`,
-        'Active Marketplaces': uniquePlatforms,
-        'Session ID': (searchResult.searchId || '').slice(0, 13) || 'AI-VISION-MATCH'
+        'Detected Model': searchResult.analysis?.productName || name,
+        'Brand': brand,
+        'Category': searchResult.analysis?.category || 'Watch',
+        'Color Profile': searchResult.analysis?.color || 'Identified Finish',
+        'Marketplaces Indexed': uniquePlatforms,
+        'Found Items': `${searchResult.totalFound ?? searchResult.products?.length ?? 0} Live Items`
       };
+
+      if (searchResult.products && searchResult.products.length > 0) {
+        const platformColors: Record<string, string> = {
+          amazon: '#ff9900',
+          flipkart: '#2874f0',
+          ajio: '#2c4152',
+          walmart: '#0071dc',
+          'best buy': '#0046be',
+          ebay: '#e53238',
+        };
+
+        deals = searchResult.products.map((p, idx) => {
+          const rawPlatform = (p.platform || 'store').toLowerCase();
+          const displayPlatform = rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1);
+          const price = Number(p.price) || 0;
+          const originalPrice = Number(p.originalPrice) || (price ? Math.round(price * 1.25) : 0);
+
+          return {
+            id: `deal-${searchResult.searchId || Date.now()}-${idx}`,
+            platform: displayPlatform,
+            title: p.title,
+            imageUrl: p.imageUrl,
+            logoColor: platformColors[rawPlatform] || '#06b6d4',
+            sellerName: `${displayPlatform} Store`,
+            sellerRating: Number(p.rating) || 4.4,
+            sellerReviewsCount: Math.floor(1200 + Math.random() * 8800),
+            price: price,
+            originalPrice: originalPrice,
+            currency: 'INR',
+            inStock: p.inStock ?? true,
+            shipping: {
+              type: 'Express Delivery' as const,
+              cost: 0,
+              estimatedDays: '2-3 Business Days'
+            },
+            condition: 'Brand New' as const,
+            returnPolicy: '7-10 Days Replacement/Return',
+            dealTag: idx === 0 ? ('Lowest Price' as const) : idx === 1 ? ('Best Value' as const) : undefined,
+            couponCode: idx === 0 ? 'SNAP10OFF' : undefined,
+            couponDiscount: idx === 0 ? 'Verified Instant Coupon' : undefined,
+            productUrl: p.productUrl || '#',
+            priceHistory: [
+              { date: '15 Days Ago', price: Math.round(price * 1.08) },
+              { date: '7 Days Ago', price: Math.round(price * 1.04) },
+              { date: 'Today', price: price }
+            ]
+          };
+        });
+
+        const sorted = [...deals].sort((a, b) => a.price - b.price);
+        const lowest = sorted[0]?.price || 0;
+        const highest = sorted[sorted.length - 1]?.price || 0;
+        const avg = Math.round(deals.reduce((acc, d) => acc + d.price, 0) / deals.length);
+
+        priceAnalytics = {
+          lowestPrice: lowest,
+          highestPrice: highest,
+          averagePrice: avg,
+          allTimeLow: lowest,
+          priceTrend: 'dropping',
+          savingsPotential: Math.max(0, highest - lowest)
+        };
+      } else {
+        deals = [];
+        priceAnalytics = {
+          lowestPrice: 0,
+          highestPrice: 0,
+          averagePrice: 0,
+          allTimeLow: 0,
+          priceTrend: 'dropping',
+          savingsPotential: 0
+        };
+      }
     }
 
     const customProduct: ProductPreset = {
       id: searchResult?.searchId || `custom-${Date.now()}`,
       name,
-      tagline: searchResult?.totalFound
-        ? `Optical Vision isolated SKU. Crawled ${searchResult.totalFound} real-time listings across Amazon, Flipkart, Ajio & more.`
-        : 'Deep visual embeddings isolated. Cross-platform prices retrieved from live APIs.',
-      category: 'Electronics',
+      tagline: searchResult?.userFeedback || (searchResult?.totalFound
+        ? `Optical Vision isolated SKU. Crawled ${searchResult.totalFound} real-time listings across ${[...new Set(searchResult.products.map((p) => p.platform?.toUpperCase()))].join(', ')}.`
+        : 'Multi-agent vision swarm identified product specifications.'),
+      category: (searchResult?.analysis?.category as any) || 'Watch',
       brand,
       model: name,
       sku: 'SKU-' + (searchResult?.searchId ? searchResult.searchId.slice(0, 8).toUpperCase() : Math.floor(100000 + Math.random() * 900000)),
@@ -316,7 +345,7 @@ export default function Home() {
       specs,
       priceAnalytics,
       deals,
-      alternatives: [
+      alternatives: deals.length > 0 ? [
         {
           id: 'alt-custom-1',
           title: 'Comparable Pro Grade Alternative Model',
@@ -333,7 +362,7 @@ export default function Home() {
           reviewsCount: 6500,
           productUrl: 'https://www.amazon.com'
         }
-      ]
+      ] : []
     };
 
     setCurrentProduct(customProduct);
