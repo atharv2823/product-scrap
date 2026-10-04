@@ -43,12 +43,41 @@ export interface SearchHistoryResponse {
   pagination: SearchHistoryPagination;
 }
 
+export interface HistorySearchResult {
+  price: number;
+  title: string;
+  inStock: boolean;
+  imageUrl?: string;
+  platform: string;
+  productUrl: string;
+  originalPrice?: number;
+}
+
+export interface HistorySearchDetail {
+  id: string;
+  userId: string;
+  searchType: string;
+  query: string;
+  userFeedback?: string;
+  analysis?: {
+    brand?: string;
+    color?: string;
+    category?: string;
+    productName?: string;
+    searchQuery?: string;
+  };
+  totalFound: number;
+  results: HistorySearchResult[];
+  createdAt: string;
+}
+
 interface SearchHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSelectSearch?: (detail: HistorySearchDetail) => void;
 }
 
-export default function SearchHistoryModal({ isOpen, onClose }: SearchHistoryModalProps) {
+export default function SearchHistoryModal({ isOpen, onClose, onSelectSearch }: SearchHistoryModalProps) {
   const [searches, setSearches] = useState<UserSearchItem[]>([]);
   const [pagination, setPagination] = useState<SearchHistoryPagination>({
     count: 0,
@@ -60,6 +89,7 @@ export default function SearchHistoryModal({ isOpen, onClose }: SearchHistoryMod
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'image' | 'text'>('all');
@@ -177,6 +207,62 @@ export default function SearchHistoryModal({ isOpen, onClose }: SearchHistoryMod
     }
     soundFX.playClick();
     fetchHistory(newPage, pageSize);
+  };
+
+  const handleLoadHistoryDetail = async (id: string) => {
+    const token =
+      typeof window !== 'undefined'
+        ? sessionStorage.getItem('access_token') || localStorage.getItem('access_token')
+        : null;
+
+    if (!token) {
+      setError('Please log in to load search history onto the page.');
+      return;
+    }
+
+    try {
+      setLoadingDetailId(id);
+      soundFX.playClick();
+
+      const response = await axios.get<HistorySearchDetail>(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/product-search/history/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data && response.data.id) {
+        soundFX.playDealFound();
+        // 1. Invoke callback prop if provided
+        if (onSelectSearch) {
+          onSelectSearch(response.data);
+        }
+        // 2. Dispatch global custom event for main dashboard
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('snapprice_load_history', { detail: response.data })
+          );
+        }
+        // Close modal
+        onClose();
+      } else {
+        throw new Error('Search history details not found.');
+      }
+    } catch (err: unknown) {
+      console.error('Error fetching search history detail:', err);
+      soundFX.playClick();
+      let errorMsg = 'Failed to load details for this search.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.message || err.message || errorMsg;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
+    } finally {
+      setLoadingDetailId(null);
+    }
   };
 
   const handleCopy = (text: string, id: string) => {
@@ -438,8 +524,28 @@ export default function SearchHistoryModal({ isOpen, onClose }: SearchHistoryMod
                     </div>
                   </div>
 
-                  {/* Right Actions: Copy button */}
+                  {/* Right Actions: View on Page & Copy button */}
                   <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleLoadHistoryDetail(item.id)}
+                      disabled={loadingDetailId === item.id}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-60 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer disabled:cursor-not-allowed"
+                      title="Load this search and live deals onto the main page"
+                    >
+                      {loadingDetailId === item.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>View on Page</span>
+                        </>
+                      )}
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleCopy(item.query, item.id)}

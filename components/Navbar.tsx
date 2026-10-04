@@ -7,7 +7,7 @@ import { Bot, Sparkles, Volume2, VolumeX, Bell,LogIn, UserPlus, LogOut, User, Hi
 import { soundFX } from './AudioFX';
 import { getCurrentUser, logoutUser, SnapPriceUser } from '../lib/auth';
 import axios from 'axios';
-import SearchHistoryModal from './SearchHistoryModal';
+import SearchHistoryModal, { HistorySearchDetail } from './SearchHistoryModal';
 
 interface NavbarProps {
   activeCurrency: string;
@@ -15,6 +15,7 @@ interface NavbarProps {
   onOpenAlertModal: () => void;
   isScanning: boolean;
   onReplayLoader?: () => void;
+  onSelectHistoryItem?: (detail: HistorySearchDetail) => void;
 }
 
 export const CURRENCY_SYMBOLS: Record<string, { symbol: string; rate: number; label: string }> = {
@@ -40,7 +41,8 @@ export default function Navbar({
   onCurrencyChange,
   onOpenAlertModal,
   isScanning,
-  onReplayLoader
+  onReplayLoader,
+  onSelectHistoryItem
 }: NavbarProps) {
   const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -362,6 +364,7 @@ export default function Navbar({
     <SearchHistoryModal
       isOpen={isHistoryModalOpen}
       onClose={() => setIsHistoryModalOpen(false)}
+      onSelectSearch={onSelectHistoryItem}
     />
   </>
   );

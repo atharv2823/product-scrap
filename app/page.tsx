@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import MotionBackground from '../components/MotionBackground';
 import Navbar from '../components/Navbar';
 import ImageScanner, { ProductSearchResponse } from '../components/ImageScanner';
+import { HistorySearchDetail } from '../components/SearchHistoryModal';
 import AgentPipeline from '../components/AgentPipeline';
 import PriceComparisonBoard from '../components/PriceComparisonBoard';
 import AlternativesSection from '../components/AlternativesSection';
@@ -43,8 +44,19 @@ export default function Home() {
       setIsLoggedIn(isAuthenticated());
     };
 
+    const handleHistoryEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<HistorySearchDetail>;
+      if (customEvent.detail) {
+        handleLoadHistoryProduct(customEvent.detail);
+      }
+    };
+
+    window.addEventListener('snapprice_load_history', handleHistoryEvent as EventListener);
     window.addEventListener('snapprice_auth_change', handleAuthChange);
-    return () => window.removeEventListener('snapprice_auth_change', handleAuthChange);
+    return () => {
+      window.removeEventListener('snapprice_auth_change', handleAuthChange);
+      window.removeEventListener('snapprice_load_history', handleHistoryEvent as EventListener);
+    };
   }, []);
 
   const triggerAgentPipeline = (productToScan: ProductPreset) => {
@@ -369,6 +381,111 @@ export default function Home() {
     triggerAgentPipeline(customProduct);
   };
 
+  const handleLoadHistoryProduct = (historyDetail: HistorySearchDetail) => {
+    const name =
+      historyDetail.analysis?.productName ||
+      historyDetail.query ||
+      'Fossil Neutra Chronograph Watch';
+
+    const brand =
+      historyDetail.analysis?.brand ||
+      (historyDetail.analysis?.productName ? historyDetail.analysis.productName.split(' ')[0] : '') ||
+      'Fossil';
+
+    const platformColors: Record<string, string> = {
+      amazon: '#ff9900',
+      flipkart: '#2874f0',
+      ajio: '#2c4152',
+      walmart: '#0071dc',
+      'best buy': '#0046be',
+      ebay: '#e53238',
+    };
+
+    const deals: PlatformDeal[] = (historyDetail.results || []).map((item, idx) => {
+      const rawPlatform = (item.platform || 'flipkart').toLowerCase();
+      const displayPlatform = rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1);
+      const price = Number(item.price) || 0;
+      const originalPrice = Number(item.originalPrice) || (price ? Math.round(price * 1.3) : 0);
+
+      return {
+        id: `deal-${historyDetail.id}-${idx}`,
+        platform: displayPlatform,
+        title: item.title,
+        imageUrl: item.imageUrl,
+        logoColor: platformColors[rawPlatform] || '#2874f0',
+        sellerName: `${displayPlatform} Store`,
+        sellerRating: 4.6,
+        sellerReviewsCount: 3820,
+        price: price,
+        originalPrice: originalPrice,
+        currency: 'INR',
+        inStock: item.inStock ?? true,
+        shipping: {
+          type: 'Express Delivery',
+          cost: 0,
+          estimatedDays: '2-3 Business Days'
+        },
+        condition: 'Brand New',
+        returnPolicy: '7-10 Days Replacement/Return',
+        dealTag: idx === 0 ? 'Lowest Price' : undefined,
+        couponCode: idx === 0 ? 'SNAPDEAL10' : undefined,
+        couponDiscount: idx === 0 ? 'Verified Instant Coupon' : undefined,
+        productUrl: item.productUrl || '#',
+        priceHistory: [
+          { date: '15 Days Ago', price: Math.round(price * 1.08) },
+          { date: '7 Days Ago', price: Math.round(price * 1.04) },
+          { date: 'Today', price: price }
+        ]
+      };
+    });
+
+    const sortedDeals = [...deals].sort((a, b) => a.price - b.price);
+    const lowest = sortedDeals[0]?.price || 0;
+    const highest = sortedDeals[sortedDeals.length - 1]?.price || (lowest ? Math.round(lowest * 1.3) : 0);
+
+    const uniquePlatforms =
+      deals.length > 0
+        ? [...new Set(deals.map((d) => d.platform))].join(', ')
+        : 'Flipkart';
+
+    const specs: Record<string, string> = {
+      'Detected Model': historyDetail.analysis?.productName || name,
+      'Brand': brand,
+      'Category': historyDetail.analysis?.category || 'Watch',
+      'Color Profile': historyDetail.analysis?.color || 'Silver, Black',
+      'Marketplaces Indexed': uniquePlatforms,
+      'Found Items': `${historyDetail.totalFound ?? deals.length} Live Items`
+    };
+
+    const firstImageUrl = historyDetail.results?.[0]?.imageUrl || '';
+
+    const productFromHistory: ProductPreset = {
+      id: historyDetail.id,
+      name,
+      tagline: historyDetail.userFeedback || `Optical vision identified ${name}. Crawled real-time listings across ${uniquePlatforms}.`,
+      category: (historyDetail.analysis?.category as any) || 'Watch',
+      brand,
+      model: name,
+      sku: 'SKU-' + (historyDetail.id ? historyDetail.id.slice(0, 8).toUpperCase() : Math.floor(100000 + Math.random() * 900000)),
+      confidenceScore: 99.4,
+      imageUrl: firstImageUrl,
+      specs,
+      priceAnalytics: {
+        lowestPrice: lowest,
+        highestPrice: highest,
+        averagePrice: lowest,
+        allTimeLow: lowest,
+        priceTrend: 'dropping',
+        savingsPotential: Math.max(0, highest - lowest)
+      },
+      deals,
+      alternatives: []
+    };
+
+    setCurrentProduct(productFromHistory);
+    triggerAgentPipeline(productFromHistory);
+  };
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#050714] flex items-center justify-center text-cyan-400 font-mono text-xs">
@@ -406,6 +523,7 @@ export default function Home() {
         onOpenAlertModal={() => setIsAlertModalOpen(true)}
         isScanning={isScanning}
         onReplayLoader={() => setShowLoader(true)}
+        onSelectHistoryItem={handleLoadHistoryProduct}
       />
 
       {/* Main Content Container */}
