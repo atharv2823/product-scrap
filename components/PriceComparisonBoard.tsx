@@ -8,7 +8,7 @@ import { soundFX } from './AudioFX';
 import confetti from 'canvas-confetti';
 
 interface PriceComparisonBoardProps {
-  product: ProductPreset;
+  product?: ProductPreset | null;
   activeCurrency: string;
 }
 
@@ -53,10 +53,17 @@ export default function PriceComparisonBoard({
     setSelectedDealModal(deal);
   };
 
-  const hasDeals = Boolean(product.deals && product.deals.length > 0);
+  // Only display deal cards when the user has uploaded an image or entered text (exclude initial demo preset)
+  const isUserUploaded = Boolean(
+    product &&
+    product.id &&
+    (product.id.startsWith('custom') || product.id.startsWith('deal-') || product.id !== 'sony-wh1000xm5')
+  );
+
+  const hasDeals = Boolean(isUserUploaded && product?.deals && product.deals.length > 0);
 
   // Filter & sort logic
-  const filteredDeals = (product.deals || []).filter((deal) => {
+  const filteredDeals = (isUserUploaded && product?.deals ? product.deals : []).filter((deal) => {
     if (filterCondition === 'new') return deal.inStock !== false;
     if (filterCondition === 'refurbished') return deal.condition?.includes('Refurbished') || deal.condition?.includes('Open Box');
     return true;
@@ -73,7 +80,7 @@ export default function PriceComparisonBoard({
     return 0;
   });
 
-  const championDeal = product.deals && product.deals.length > 0
+  const championDeal = hasDeals && product?.deals && product.deals.length > 0
     ? product.deals.reduce((prev, curr) => (curr.price < prev.price ? curr : prev), product.deals[0])
     : null;
 
@@ -149,8 +156,22 @@ export default function PriceComparisonBoard({
         )}
       </div>
 
-      {/* Grid of All Store Platform Deals or Server Pressure Alert */}
-      {!hasDeals ? (
+      {/* Grid of All Store Platform Deals, Awaiting Upload Placeholder, or Server Pressure Alert */}
+      {!isUserUploaded ? (
+        <div className="w-full rounded-2xl border border-indigo-500/20 bg-[#090d24]/90 p-8 sm:p-12 text-center backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center space-y-4 my-4">
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shadow-inner">
+            <ShoppingCart className="w-8 h-8" />
+          </div>
+          <div className="max-w-xl space-y-2">
+            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Waiting for Product Image or Text
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Upload a product image or enter text in the scanner above to compare live prices, discounts, and store listings across Amazon, Walmart, Best Buy, and eBay.
+            </p>
+          </div>
+        </div>
+      ) : !hasDeals ? (
         <div className="w-full rounded-2xl border border-amber-500/30 bg-[#090d24]/90 p-8 sm:p-12 text-center backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center space-y-4 my-4">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
             <AlertCircle className="w-8 h-8 animate-pulse" />
