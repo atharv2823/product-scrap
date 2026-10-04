@@ -532,14 +532,14 @@ export default function ImageScanner({
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  {/* <div className="text-right">
                     <div className="text-[10px] uppercase font-mono tracking-wider text-cyan-300">
                       Max Arbitrage Savings
                     </div>
                     <div className="text-base font-bold text-cyan-300 font-mono">
                       +{formatInrPrice(currentProduct.priceAnalytics.savingsPotential)} OFF
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#060a22]/80 border border-indigo-500/20 text-slate-400">
