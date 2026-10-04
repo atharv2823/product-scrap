@@ -119,7 +119,7 @@ export default function PriceComparisonBoard({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Items ({product.deals.length})
+              All Items ({product?.deals?.length || 0})
             </button>
             <button
               onClick={() => {
@@ -363,7 +363,7 @@ export default function PriceComparisonBoard({
               <div className="w-full h-36 rounded-2xl bg-[#040718] border border-slate-800/80 p-2 flex items-center justify-center overflow-hidden">
                 <img
                   src={selectedDealModal.imageUrl}
-                  alt={selectedDealModal.title || product.name}
+                  alt={selectedDealModal.title || product?.name || 'Product'}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -372,7 +372,7 @@ export default function PriceComparisonBoard({
             <div className="p-4 rounded-2xl bg-[#040718] border border-slate-800 space-y-2">
               <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">SELECTED STORE ITEM</div>
               <div className="font-bold text-xs sm:text-sm text-white line-clamp-2 leading-snug">
-                {selectedDealModal.title || product.name}
+                {selectedDealModal.title || product?.name || 'Product'}
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                 <span className="text-xs text-slate-400">Store Platform:</span>
